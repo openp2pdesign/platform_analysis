@@ -1,2 +1,2 @@
-# PyMakerspaces
-Python library for accessing online data about Makerspaces, Fab Labs, Hackerspaces, TechShop...
+# repoSNA
+Python library for Social Network Analysis of Git, Hg, SVN, GitHub, BitBucket repositories
