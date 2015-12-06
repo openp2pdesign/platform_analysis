@@ -27,29 +27,18 @@ def convert_log_to_dict(input_text):
 def get_log(projectpath):
     # The pretty format for all the information from the log
     log_pretty_format = '''{%n
-    "commit": "%H",%n
-    "abbreviated_commit": "%h",%n
-    "tree": "%T",%n
-    "abbreviated_tree": "%t",%n
-    "parent": "%P",%n
-    "abbreviated_parent": "%p",%n
-    "refs": "%D",%n
-    "encoding": "%e",%n
-    "subject": "%s",%n
-    "sanitized_subject_line": "%f",%n
-    "body": "%b",%n
-    "commit_notes": "%N",%n
-    "verification_flag": "%G?",%n
-    "signer": "%GS",%n
-    "signer_key": "%GK",%n
+    "@node": "%H",%n
+    "date": "%aD",%n
+    "msg": {%n
+    "#text": "%s"%n
+    },%n
     "author": {%n
-    "name": "%aN",%n
-    "email": "%aE",%n
-    "date": "%aD"%n  },%n
+    "#text": "%aN",%n
+    "@email": "%aE"%n
+    },%n
     "commiter": {%n
-    "name": "%cN",%n
-    "email": "%cE",%n
-    "date": "%cD"%n
+    "#text": "%cN",%n
+    "@email": "%cE"%n
     }%n},'''
 
     # Get the verbose log in json
@@ -62,9 +51,10 @@ def get_log(projectpath):
 
     # Do a diff-tree for each commit
     for i in all_commits:
+
         # Load the current commit id
         current_commit = unicodedata.normalize(
-            'NFKD', i["commit"]).encode('ascii', 'ignore')
+            'NFKD', i["@node"]).encode('ascii', 'ignore')
 
         # Create the command for diff-tree
         current_command = 'git diff-tree --no-commit-id --name-status -r ' + \
@@ -79,15 +69,17 @@ def get_log(projectpath):
             line for line in gitfileslog.split('\n') if line.strip() != '']
 
         # Create an empty dict for files for the current commit
-        i["files"] = {}
+        i["paths"] = {}
 
         # Cycle through each file changed in the current commit
         for k, j in enumerate(current_files_list):
             # Split action and filename, and save them as a dict
             each_file_info = j.split('\t')
-            i["files"][k] = {
-                "action": each_file_info[0], "filename": each_file_info[1]}
+            i["paths"]["path"] = {
+                "@action": each_file_info[0], "#text": each_file_info[1]}
 
+    # Format the log like hg and svn
+    all_commits = {"log": {"logentry": all_commits}}
     # Return the full log with files changed at each commit
     return all_commits
 
