@@ -21,7 +21,7 @@ def get_log(projectpath):
         cwd=projectpath, shell=True)
 
     # Convert to a dict
-    all_commits = json.dumps(xmltodict.parse(svnlog))
+    all_commits = xmltodict.parse(svnlog)
 
     # Return the full log with files changed at each commit
     return all_commits
