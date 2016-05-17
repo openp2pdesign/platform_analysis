@@ -23,7 +23,7 @@ def convert_log_to_dict(input_text):
     return local_commits
 
 
-# Get the information of a git repository into a dict
+# Get the information of a git repository into a dict
 def get_log(projectpath):
     # The pretty format for all the information from the log
     log_pretty_format = '''{%n
@@ -52,7 +52,7 @@ def get_log(projectpath):
     # Do a diff-tree for each commit
     for i in all_commits:
 
-        # Load the current commit id
+        # Load the current commit id
         current_commit = unicodedata.normalize(
             'NFKD', i["@node"]).encode('ascii', 'ignore')
 
@@ -64,23 +64,23 @@ def get_log(projectpath):
         gitfileslog = subprocess.check_output(
             [current_command], cwd=projectpath, shell=True)
 
-        # Split the output in a list of files
+        # Split the output in a list of files
         current_files_list = [
             line for line in gitfileslog.split('\n') if line.strip() != '']
 
-        # Create an empty dict for files for the current commit
+        # Create an empty dict for files for the current commit
         i["paths"] = {}
 
-        # Cycle through each file changed in the current commit
+        # Cycle through each file changed in the current commit
         for k, j in enumerate(current_files_list):
-            # Split action and filename, and save them as a dict
+            # Split action and filename, and save them as a dict
             each_file_info = j.split('\t')
             i["paths"]["path"] = {
                 "@action": each_file_info[0], "#text": each_file_info[1]}
 
-    # Format the log like hg and svn
+    # Format the log like hg and svn
     all_commits = {"log": {"logentry": all_commits}}
-    # Return the full log with files changed at each commit
+    # Return the full log with files changed at each commit
     return all_commits
 
 if __name__ == "__main__":

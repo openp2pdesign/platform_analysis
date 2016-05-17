@@ -12,7 +12,7 @@ import json
 import xmltodict
 
 
-# Get the information of an hg repository into a dict
+# Get the information of an hg repository into a dict
 def get_log(projectpath):
 
     # Get the verbose log in xml
@@ -23,7 +23,7 @@ def get_log(projectpath):
     # Convert to a dict
     all_commits = xmltodict.parse(hglog)
 
-    # Return the full log with files changed at each commit
+    # Return the full log with files changed at each commit
     return all_commits
 
 if __name__ == "__main__":
