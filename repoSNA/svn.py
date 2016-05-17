@@ -8,7 +8,6 @@
 #
 
 import subprocess
-import json
 import xmltodict
 
 
