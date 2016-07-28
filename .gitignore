@@ -23,6 +23,7 @@ lib64/
 parts/
 sdist/
 var/
+.idea/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -60,3 +61,7 @@ docs/_build/
 
 # PyBuilder
 target/
+
+# Various
+parser_table.py
+*.json

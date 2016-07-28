@@ -7,10 +7,11 @@ setup(
         "requests",
         "mwparserfromhell",
         "simplemediawiki",
-        "wsgiref"
+        "wsgiref",
+        "networkx"
     ],
     version='0.11',
-    description='Python library for Social Network Analysis of Git, Hg, SVN, GitHub, BitBucket repositories',
+    description='Python library for Social Network Analysis of Git, Hg, SVN, GitHub, GitLab, BitBucket repositories',
     author='Massimo Menichinelli',
     author_email='info@openp2pdesign.org',
     url='https://github.com/openp2pdesign/repoSNA',
