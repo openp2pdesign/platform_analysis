@@ -11,6 +11,7 @@ from github import Github
 import networkx as nx
 import getpass
 from validate_email import validate_email
+import re
 
 
 # Global variables
@@ -123,18 +124,19 @@ def issue_analysis(issue):
         message_body_split = message_body.split()
         for word in message_body_split:
             word = word.encode('utf-8')
-            if "<" in word and ">" in word:
-                word.replace(u"<","")
-            if ">" in word:
-                word.replace(u">","")
+            # If the word is an username...
             if "@" in word:
-                print word
-                print validate_email(word)
-                word.replace("@","")
-                print word
-                print current_commenter, "--->", word
-                print ".-----"
-                print ""
+                # Check that it is a username and not an e-mail address
+                email_check = re.findall(r'[\w\.-]+@[\w\.-]+', word)
+                # If it is not an e-mail address but an username, add an edge
+                if len(email_check) != 0:
+                    # Remove the @ mention char
+                    word = re.sub(r'@', "", word)
+                    # If the username is a word longer than 0 chars, then
+                    # create an edge from the issue comment author to the
+                    # mentioned username
+                    if len(word) != 0:
+                        graph.add_edge(str(current_commenter), str(word))
         if f.user is not None:
             # Issue comment author
             issues[issue.number]["comments"][j] = f.user.login
