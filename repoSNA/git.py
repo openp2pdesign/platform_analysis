@@ -83,7 +83,8 @@ def get_log(path):
         for k, j in enumerate(current_files_list):
             # Split action and filename, and save them as a dict
             each_file_info = j.split('\t')
-            i["paths"]["path"] = {
+
+            i["paths"][k] = {
                 "@action": each_file_info[0], "#text": each_file_info[1]}
 
     # Format the log like hg and svn
@@ -119,7 +120,7 @@ def git_clone_analysis(url, path):
 
         # Git log output
         git_log = get_log(where)
-
+        print git_log
         for commit in git_log["log"]["logentry"]:
             print commit
             print "SHA",commit["@node"]
