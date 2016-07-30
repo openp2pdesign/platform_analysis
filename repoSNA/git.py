@@ -8,14 +8,19 @@
 #
 
 import subprocess
+import os
+import shutil
 import json
 from splitstream import splitfile
 import StringIO
 import unicodedata
 
 
-# Convert the log output to json
 def convert_log_to_dict(input_text):
+    """
+    Convert the git log output to json.
+    """
+
     local_commits = []
     f = StringIO.StringIO(input_text)
     for jsonstr in splitfile(f, format="json"):
@@ -23,8 +28,11 @@ def convert_log_to_dict(input_text):
     return local_commits
 
 
-# Get the information of a git repository into a dict
-def get_log(projectpath):
+def get_log(path):
+    """
+    Get the information of a git repository into a dict.
+    """
+
     # The pretty format for all the information from the log
     log_pretty_format = '''{%n
     "@node": "%H",%n
@@ -44,7 +52,7 @@ def get_log(projectpath):
     # Get the verbose log in json
     gitlog = subprocess.check_output(
         ['git', 'log', '--pretty=format:' + log_pretty_format],
-        cwd=projectpath)
+        cwd=path)
 
     # Convert to a dict
     all_commits = convert_log_to_dict(gitlog)
@@ -62,7 +70,7 @@ def get_log(projectpath):
 
         # Get the log of the files for the current commit
         gitfileslog = subprocess.check_output(
-            [current_command], cwd=projectpath, shell=True)
+            [current_command], cwd=path, shell=True)
 
         # Split the output in a list of files
         current_files_list = [
@@ -80,8 +88,59 @@ def get_log(projectpath):
 
     # Format the log like hg and svn
     all_commits = {"log": {"logentry": all_commits}}
+
     # Return the full log with files changed at each commit
     return all_commits
+
+
+def git_clone_analysis(url, path):
+    """
+    Clone, analyse (and then remove the local copy) a remote git repository.
+    """
+
+    # If we are on Linux or Mac
+    if os.name == "posix":
+        tmp_dir = "git.py.tmp"
+        where = path + "/" + tmp_dir
+
+        # Remove the temporary directory if it exists
+        if os.path.isdir(where):
+            try:
+                shutil.rmtree(where)
+            except subprocess.CalledProcessError as e:
+                return e.returncode
+
+        # Git clone to the temporary directory
+        try:
+            results = subprocess.check_output(
+                ["git", "clone", url, where], cwd=path)
+        except subprocess.CalledProcessError as e:
+            return e.returncode
+
+        # Git log output
+        git_log = get_log(where)
+
+        for commit in git_log["log"]["logentry"]:
+            print commit
+            print "SHA",commit["@node"]
+            print "AUTHOR",commit["author"]["#text"]
+            print "FILES"
+            print commit["paths"]
+            for committed_file in commit["paths"]:
+                print committed_file
+            print "----"
+            print ""
+        # Git log social network analysis
+
+        # Remove the temporary directory if it exists
+        if os.path.isdir(where):
+            try:
+                shutil.rmtree(where)
+            except subprocess.CalledProcessError as e:
+                return e.returncode
+
+    return results
+
 
 if __name__ == "__main__":
     pass

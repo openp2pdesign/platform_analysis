@@ -12,6 +12,7 @@ import networkx as nx
 import getpass
 import re
 import string
+import git
 
 
 # Global variables
@@ -214,6 +215,7 @@ def repo_analysis(repository):
         for i in repository.get_issues(state="closed"):
             issue_analysis(i)
 
+    # Debug code
     print(graph.nodes(), graph.edges())
     nx.write_gexf(graph, "test.gexf")
     exit()
@@ -226,6 +228,10 @@ def repo_analysis(repository):
     for i in repository.get_comments():
         print(i.__dict__)
     exit()
+
+
+    # Move this into a separate function as with the issues
+
 
     # Creating the edges from the commits and their comments.
     # Each comment interacts with the previous ones,
