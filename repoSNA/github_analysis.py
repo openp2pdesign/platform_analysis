@@ -10,8 +10,8 @@
 from github import Github
 import networkx as nx
 import getpass
-from validate_email import validate_email
 import re
+import string
 
 
 # Global variables
@@ -95,7 +95,7 @@ def github_analysis(repository, username, userlogin, password):
 
 def issue_analysis(issue):
     """
-    Analyse the discussion of an issue, and add edges to the main global graph.
+    Analyse the discussion of a single issue, and add data to the global issues variable and edges to the main global graph.
     """
 
     if issue.user is not None:
@@ -120,6 +120,9 @@ def issue_analysis(issue):
         currentd = f.__dict__
         current_raw_data = currentd["_rawData"]
         current_commenter = current_raw_data["user"]["login"]
+
+        # Check if there are any username mentions in the body of each comment,
+        # and add an edge if there are any
         message_body = current_raw_data["body"]
         message_body_split = message_body.split()
         for word in message_body_split:
@@ -128,18 +131,23 @@ def issue_analysis(issue):
             if "@" in word:
                 # Check that it is a username and not an e-mail address
                 email_check = re.findall(r'[\w\.-]+@[\w\.-]+', word)
-                # If it is not an e-mail address but an username, add an edge
-                if len(email_check) != 0:
+                # If it is not an e-mail address but an username, add an edge
+                if len(email_check) == 0:
                     # Remove the @ mention char
                     word = re.sub(r'@', "", word)
                     # If the username is a word longer than 0 chars, then
                     # create an edge from the issue comment author to the
                     # mentioned username
                     if len(word) != 0:
+                        # Remove strange punctuation at the end, if any
+                        if word[-1] in string.punctuation:
+                            word = word[:-1]
                         graph.add_edge(str(current_commenter), str(word))
         if f.user is not None:
             # Issue comment author
             issues[issue.number]["comments"][j] = f.user.login
+            # Add an edge from the comment author to the main issue author
+            graph.add_edge(str(current_commenter), str(issue.user.login))
         else:
             # Issue comment author left by None
             issues[issue.number]["comments"][j] = "None"
@@ -207,6 +215,7 @@ def repo_analysis(repository):
             issue_analysis(i)
 
     print(graph.nodes(), graph.edges())
+    nx.write_gexf(graph, "test.gexf")
     exit()
 
     # Add edges based on commits
