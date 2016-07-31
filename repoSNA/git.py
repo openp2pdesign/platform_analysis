@@ -15,6 +15,7 @@ from splitstream import splitfile
 import StringIO
 import unicodedata
 from collections import OrderedDict
+import networkx as nx
 
 
 def convert_log_to_dict(input_text):
@@ -171,7 +172,7 @@ def get_files_log(path):
     return all_files
 
 
-def git_clone_analysis(url, path):
+def git_clone_analysis(url, path, graph):
     """
     Clone, analyse (and then remove the local copy) a remote git repository.
     """
@@ -190,7 +191,7 @@ def git_clone_analysis(url, path):
 
         # Git clone to the temporary directory
         try:
-            results = subprocess.check_output(
+            subprocess.check_output(
                 ["git", "clone", url, where], cwd=path)
         except subprocess.CalledProcessError as e:
             return e.returncode
@@ -198,27 +199,35 @@ def git_clone_analysis(url, path):
         # Load the log output for each file
         git_files_log = get_files_log(where)["log"]["logentry"]
 
-        # MOVE THIS TO A FUNCTION
-
-        # for each file, check its history
-        # so, change the log from commit-based to file based
-        # then connect people based on date
+        # For each file, check its history and connect commiters based on
+        # commit order: connect each commiter with the previous ones for the
+        # same file (path dependency)
         for k, each_file in enumerate(git_files_log):
-            print each_file
             file_history = {}
             for l, each_commit in enumerate(git_files_log[each_file]):
-                print each_commit
-                file_history[l] = {"author" : each_commit["author"]["#text"], "date" : each_commit["date"]}
+                file_history[l] = {"author": each_commit["author"][
+                    "#text"], "date": each_commit["date"]}
 
-            sorted_file_history = OrderedDict(sorted(file_history.iteritems(), key=lambda x: x[1]['date']))
+            # Sort the dict in order to be sure about the chronological order
+            sorted_file_history = OrderedDict(
+                sorted(file_history.iteritems(), key=lambda x: x[1]['date']))
 
+            # Add an edge from a committer to the previous ones and
+            # if they are not the same person (i.e. it avoids
+            # self-loops)
             for j in sorted_file_history:
-                print j, sorted_file_history[j]
-                print ""
-            print "----"
-            print ""
-
-        # Git log social network analysis
+                following_commiters = {}
+                for l in range(j):
+                    following_commiters[l] = (sorted_file_history[l]["author"])
+                following_commiters[j] = sorted_file_history[j]["author"]
+                reversed_following_commiters = OrderedDict(
+                    sorted(following_commiters.items(), reverse=True))
+                for t in following_commiters:
+                    if t < len(reversed_following_commiters) - 1:
+                        first_actor = reversed_following_commiters[t]
+                        second_actor = sorted_file_history[j]["author"]
+                        if first_actor != second_actor:
+                            graph.add_edge(first_actor, second_actor)
 
         # Remove the temporary directory if it exists
         if os.path.isdir(where):
@@ -227,7 +236,7 @@ def git_clone_analysis(url, path):
             except subprocess.CalledProcessError as e:
                 return e.returncode
 
-    return results
+    return
 
 
 if __name__ == "__main__":
