@@ -23,11 +23,15 @@ def convert_log_to_dict(input_text):
     Convert the git log output to json.
     """
 
-    local_commits = []
+    items = []
     f = StringIO.StringIO(input_text)
     for jsonstr in splitfile(f, format="json"):
-        local_commits.append(json.loads(jsonstr))
-    return local_commits
+        try:
+            items.append(json.loads(jsonstr))
+        except Exception as e:
+            return e
+
+    return items
 
 
 def get_commits_log(path):
@@ -39,14 +43,12 @@ def get_commits_log(path):
     log_pretty_format = '''{%n
     "@node": "%H",%n
     "date": "%aD",%n
-    "msg": {%n
-    "#text": "%s"%n
-    },%n
+    "msg": "%f",%n
     "author": {%n
     "#text": "%aN",%n
     "@email": "%aE"%n
     },%n
-    "commiter": {%n
+    "committer": {%n
     "#text": "%cN",%n
     "@email": "%cE"%n
     }%n},'''
@@ -105,14 +107,12 @@ def get_files_log(path):
     log_pretty_format = '''{%n
     "@node": "%H",%n
     "date": "%aD",%n
-    "msg": {%n
-    "#text": "%s"%n
-    },%n
+    "msg": "%f",%n
     "author": {%n
     "#text": "%aN",%n
     "@email": "%aE"%n
     },%n
-    "commiter": {%n
+    "committer": {%n
     "#text": "%cN",%n
     "@email": "%cE"%n
     }%n},'''
@@ -199,8 +199,8 @@ def git_clone_analysis(url, path, graph):
         # Load the log output for each file
         git_files_log = get_files_log(where)["log"]["logentry"]
 
-        # For each file, check its history and connect commiters based on
-        # commit order: connect each commiter with the previous ones for the
+        # For each file, check its history and connect committers based on
+        # commit order: connect each committer with the previous ones for the
         # same file (path dependency)
         for k, each_file in enumerate(git_files_log):
             file_history = {}
@@ -216,15 +216,16 @@ def git_clone_analysis(url, path, graph):
             # if they are not the same person (i.e. it avoids
             # self-loops)
             for j in sorted_file_history:
-                following_commiters = {}
+                following_committers = {}
                 for l in range(j):
-                    following_commiters[l] = (sorted_file_history[l]["author"])
-                following_commiters[j] = sorted_file_history[j]["author"]
-                reversed_following_commiters = OrderedDict(
-                    sorted(following_commiters.items(), reverse=True))
-                for t in following_commiters:
-                    if t < len(reversed_following_commiters) - 1:
-                        first_actor = reversed_following_commiters[t]
+                    following_committers[l] = (
+                        sorted_file_history[l]["author"])
+                following_committers[j] = sorted_file_history[j]["author"]
+                reversed_following_committers = OrderedDict(
+                    sorted(following_committers.items(), reverse=True))
+                for t in following_committers:
+                    if t < len(reversed_following_committers) - 1:
+                        first_actor = reversed_following_committers[t]
                         second_actor = sorted_file_history[j]["author"]
                         if first_actor != second_actor:
                             graph.add_edge(first_actor, second_actor)
