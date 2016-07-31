@@ -216,6 +216,10 @@ def git_clone_analysis(url, path, graph):
             # if they are not the same person (i.e. it avoids
             # self-loops)
             for j in sorted_file_history:
+                # Add the committers in case they are not in the graph
+                if sorted_file_history[j]["author"] not in graph:
+                    graph.add_node(sorted_file_history[j]["author"])
+                # Look for the interactions
                 following_committers = {}
                 for l in range(j):
                     following_committers[l] = (
@@ -227,6 +231,7 @@ def git_clone_analysis(url, path, graph):
                     if t < len(reversed_following_committers) - 1:
                         first_actor = reversed_following_committers[t]
                         second_actor = sorted_file_history[j]["author"]
+                        # Add the edge
                         if first_actor != second_actor:
                             graph.add_edge(first_actor, second_actor)
 
