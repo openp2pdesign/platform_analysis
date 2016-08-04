@@ -172,7 +172,7 @@ def get_files_log(path):
     return all_files
 
 
-def git_clone_analysis(url, path, graph):
+def git_remote_repo_analysis(url, path, graph):
     """
     Clone, analyse (and then remove the local copy) a remote git repository.
     """
@@ -205,8 +205,10 @@ def git_clone_analysis(url, path, graph):
         for k, each_file in enumerate(git_files_log):
             file_history = {}
             for l, each_commit in enumerate(git_files_log[each_file]):
-                file_history[l] = {"author": each_commit["author"][
-                    "#text"], "date": each_commit["date"]}
+                file_history[l] = {
+                    "author": each_commit["author"]["#text"],
+                    "email": each_commit["author"]["@email"],
+                    "date": each_commit["date"]}
 
             # Sort the dict in order to be sure about the chronological order
             sorted_file_history = OrderedDict(
@@ -219,6 +221,8 @@ def git_clone_analysis(url, path, graph):
                 # Add the committers in case they are not in the graph
                 if sorted_file_history[j]["author"] not in graph:
                     graph.add_node(sorted_file_history[j]["author"])
+                    graph.node[sorted_file_history[j]["author"]][
+                        "email"] = sorted_file_history[j]["email"]
                 # Look for the interactions
                 following_committers = {}
                 for l in range(j):
@@ -242,7 +246,61 @@ def git_clone_analysis(url, path, graph):
             except subprocess.CalledProcessError as e:
                 return e.returncode
 
-    return
+    return graph
+
+
+def git_local_repo_analysis(path, graph):
+    """
+    Analyse a local git repository.
+    """
+
+    # If we are on Linux or Mac
+    if os.name == "posix":
+
+        # Load the log output for each file
+        git_files_log = get_files_log(path)["log"]["logentry"]
+
+        # For each file, check its history and connect committers based on
+        # commit order: connect each committer with the previous ones for the
+        # same file (path dependency)
+        for k, each_file in enumerate(git_files_log):
+            file_history = {}
+            for l, each_commit in enumerate(git_files_log[each_file]):
+                file_history[l] = {
+                    "author": each_commit["author"]["#text"],
+                    "email": each_commit["author"]["@email"],
+                    "date": each_commit["date"]}
+
+            # Sort the dict in order to be sure about the chronological order
+            sorted_file_history = OrderedDict(
+                sorted(file_history.iteritems(), key=lambda x: x[1]['date']))
+
+            # Add an edge from a committer to the previous ones and
+            # if they are not the same person (i.e. it avoids
+            # self-loops)
+            for j in sorted_file_history:
+                # Add the committers in case they are not in the graph
+                if sorted_file_history[j]["author"] not in graph:
+                    graph.add_node(sorted_file_history[j]["author"])
+                    graph.node[sorted_file_history[j]["author"]][
+                        "email"] = sorted_file_history[j]["email"]
+                # Look for the interactions
+                following_committers = {}
+                for l in range(j):
+                    following_committers[l] = (
+                        sorted_file_history[l]["author"])
+                following_committers[j] = sorted_file_history[j]["author"]
+                reversed_following_committers = OrderedDict(
+                    sorted(following_committers.items(), reverse=True))
+                for t in following_committers:
+                    if t < len(reversed_following_committers) - 1:
+                        first_actor = reversed_following_committers[t]
+                        second_actor = sorted_file_history[j]["author"]
+                        # Add the edge
+                        if first_actor != second_actor:
+                            graph.add_edge(first_actor, second_actor)
+
+    return graph
 
 
 if __name__ == "__main__":
