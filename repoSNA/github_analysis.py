@@ -7,11 +7,13 @@
 # License: LGPL v.3
 #
 
-from github import Github
-import networkx as nx
-import getpass
+
 import re
 import string
+
+from github import Github
+import networkx as nx
+
 import git
 
 
@@ -41,7 +43,7 @@ def github_login(userlogin, username, password):
     return results
 
 
-def github_analysis(repository, username, userlogin, password):
+def github_analysis(repository, username, userlogin, password, path):
     """
     Analyse a specific repository.
     """
@@ -50,9 +52,9 @@ def github_analysis(repository, username, userlogin, password):
     g = Github(userlogin, password)
     starting_repository_object = g.get_user(username).get_repo(repository)
 
-    repo_analysis(starting_repository_object)
+    repo_analysis(repository=starting_repository_object, path=path)
 
-    # Then we analyse forks of the starting repo
+    # Then we analyse forks of the starting repo
     for f, i in enumerate(b.get_forks()):
         testing = i.__dict__
         print(testing["_rawData"]["full_name"])
@@ -62,7 +64,7 @@ def github_analysis(repository, username, userlogin, password):
         print(testing["_rawData"]["owner"]["login"])
         print("...")
 
-    # every pull request is an issue
+    # TODO every pull request is an issue
 
     # Getting rid of the node "None", it was used to catch the errors of users
     # that are NoneType
@@ -94,7 +96,7 @@ def github_analysis(repository, username, userlogin, password):
     return graph2
 
 
-def issue_analysis(issue):
+def issue_analysis(issue, graph):
     """
     Analyse the discussion of a single issue, and add data to the global issues variable and edges to the main global graph.
     """
@@ -148,13 +150,16 @@ def issue_analysis(issue):
             # Issue comment author
             issues[issue.number]["comments"][j] = f.user.login
             # Add an edge from the comment author to the main issue author
+            # TODO: add also to all the previous commenters!
             graph.add_edge(str(current_commenter), str(issue.user.login))
         else:
             # Issue comment author left by None
             issues[issue.number]["comments"][j] = "None"
 
+    return graph
 
-def repo_analysis(repository):
+
+def repo_analysis(repository, path):
     """
     Analyse a specific GitHub repo. This function may be applied to one repo or also to all its forks.
     """
@@ -167,6 +172,7 @@ def repo_analysis(repository):
         if i is not None:
             if i.login not in graph:
                 graph.add_node(str(unicode(i.login)), watcher="Yes")
+                graph.node[i.login]["email"] = str(i.email)
             else:
                 graph.node[i.login]["watcher"] = "Yes"
         else:
@@ -177,6 +183,7 @@ def repo_analysis(repository):
         if i is not None:
             if i.login not in graph:
                 graph.add_node(str(unicode(i.login)), collaborator="Yes")
+                graph.node[i.login]["email"] = str(i.email)
             else:
                 graph.node[i.login]["collaborator"] = "Yes"
         else:
@@ -187,6 +194,7 @@ def repo_analysis(repository):
         if i.login is not None:
             if i.login not in graph:
                 graph.add_node(str(unicode(i.login)), contributor="Yes")
+                graph.node[i.login]["email"] = str(i.email)
             else:
                 graph.node[i.login]["contributor"] = "Yes"
         else:
@@ -209,31 +217,76 @@ def repo_analysis(repository):
     if repository.has_issues is True:
         # Check the open issues
         for i in repository.get_issues(state="open"):
-            issue_analysis(i)
+            issue_analysis(i, graph)
 
         # Check the closed issues
         for i in repository.get_issues(state="closed"):
-            issue_analysis(i)
+            issue_analysis(i, graph)
+
+
+    # Analyse the commits
+
+    # Check the data from GitHub
+    github_commits = []
+
+    for i in repository.get_commits():
+        commit = {
+            "@node": i.sha,
+            "date": i.commit.author.date,
+            "msg": i.commit.message,
+            "author": {
+                "#text": i.author.login,
+                "@email": i.author.email,
+                "avatar_url": i.author.avatar_url
+                },
+            "committer": {
+                "#text": i.committer.login,
+                "@email": i.committer.email,
+                "avatar_url": i.committer.avatar_url
+                },
+            }
+        github_commits.append(commit)
+
+        # Check the data from cloning the repo
+        # it should output a dict
+        git_remote_repo_analysis(url, path, graph)
+
+        # fare: storia del repo, con username
+        # poi: analisi con clone
+        # dal log analisi con clone, accoppiamo username da qui
+
+        # Comments for commits
+        github_commits_comments = []
+
+        for i in repository.get_comments():
+            comment = {
+                "@node": i.commit_id,
+                "date": i.created_at,
+                "msg": i.body,
+                "author": {
+                    "#text": i.user.login,
+                    "@email": i.user.email,
+                    "avatar_url": i.user.avatar_url
+                    },
+                }
+            github_commits_comments.append(comment)
+
 
     # Debug code
-    print(graph.nodes(), graph.edges())
+    for v in graph.nodes_iter(data = True):
+        print ".........."
+        print v
     nx.write_gexf(graph, "test.gexf")
     exit()
 
-    # Add edges based on commits
-    # Use the git.py by cloning and analysing the local repo
-
-    # Check the commits
-    # commit comments
-    for i in repository.get_comments():
-        print(i.__dict__)
-    exit()
 
 
-    # Move this into a separate function as with the issues
+
+    # TODO Move this into a separate function as with the issues
 
 
-    # Creating the edges from the commits and their comments.
+    # TODO
+    # Creating the edges from the commits and their comments.
     # Each comment interacts with the previous ones,
     # so each user interacts with the previous ones that have been creating
     # the issue or commented it
@@ -259,7 +312,8 @@ def repo_analysis(repository):
                 print "- Adding an edge from ", f.user.login, "to", comm[k]["comments"][l]
                 graph.add_edge(str(f.user.login), str(comm[k]["comments"][l]))
 
-    # Creating the edges from the issues and their comments.
+    # TODO: check
+    # Creating the edges from the issues and their comments.
     # Each comment interacts with the previous ones,
     # so each user interacts with the previous ones that have been creating
     # the issue or commented it
@@ -303,8 +357,14 @@ def repo_analysis(repository):
         print "Adding an edge from:", one, "to:", two
         graph.add_edge(str(one), str(two))
 
-        # We should look at the comments on the pull request, but a pull request is automatically translated
+        # TODO We should look at the comments on the pull request, but a pull request is automatically translated
         # as an issue, so we are already looking at the issue comments
+
+        # TODO FORKS. make an option to recursively analyse forks with this script and with git.py, but by removing the already existing work done
+        # for example: if repository.fork is True...
+        # from the main repo: get_forks() (paginated list)
+        # We can get the starting point with "created_at": "2016-07-23T05:22:58Z",
+
 
     return graph
 
