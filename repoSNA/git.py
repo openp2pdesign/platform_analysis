@@ -7,6 +7,7 @@
 # License: LGPL v.3
 #
 
+
 import subprocess
 import os
 import shutil
@@ -15,6 +16,7 @@ from splitstream import splitfile
 import StringIO
 import unicodedata
 from collections import OrderedDict
+
 import networkx as nx
 
 
@@ -218,6 +220,46 @@ def git_repo_analysis(git_files_log, graph):
                         graph.add_edge(first_actor, second_actor)
 
     return graph
+
+
+def git_remote_repo_log(url, path, log_type):
+    """
+    Clone, retrieve the log of (and then remove the local copy) a remote git repository.
+    """
+
+    # If we are on Linux or Mac
+    if os.name == "posix":
+        tmp_dir = "git.py.tmp"
+        where = path + "/" + tmp_dir
+
+        # Remove the temporary directory if it exists
+        if os.path.isdir(where):
+            try:
+                shutil.rmtree(where)
+            except subprocess.CalledProcessError as e:
+                return e.returncode
+
+        # Git clone to the temporary directory
+        try:
+            subprocess.check_output(
+                ["git", "clone", url, where], cwd=path)
+        except subprocess.CalledProcessError as e:
+            return e.returncode
+
+        # Load the log output
+        if log_type.lower() == "files" or log_type.lower() == "file":
+            git_log = get_files_log(where)["log"]["logentry"]
+        else:
+            git_log = get_commits_log(where)["log"]["logentry"]
+
+        # Remove the temporary directory if it exists
+        if os.path.isdir(where):
+            try:
+                shutil.rmtree(where)
+            except subprocess.CalledProcessError as e:
+                return e.returncode
+
+    return git_log
 
 
 def git_remote_repo_analysis(url, path, graph):

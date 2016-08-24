@@ -12,8 +12,8 @@ import re
 import string
 
 from github import Github
-import networkx as nx
 
+import networkx as nx
 import git
 
 
@@ -23,6 +23,13 @@ issues = {0: {"author": "none", "comments": {}}}
 commits = {0: {"commit", "sha"}}
 repos = {}
 graph = nx.MultiDiGraph()
+
+
+def check_none(value_to_check):
+    """
+    Helper function that checks for None values from the GitHub APIs.
+    """
+    return value_to_check if value_to_check is not None else "None"
 
 
 def github_login(userlogin, username, password):
@@ -64,12 +71,15 @@ def github_analysis(repository, username, userlogin, password, path):
         print(testing["_rawData"]["owner"]["login"])
         print("...")
 
+    # TODO do repo_analysis( for each fork, checking the starting point
     # TODO every pull request is an issue
 
-    # Getting rid of the node "None", it was used to catch the errors of users
+    # Get rid of the node "None", it was used to catch the errors of users
     # that are NoneType
     if "None" in graph:
         graph.remove_node('None')
+
+    # TODO Get rid of self-loops
 
     # Converting multiple edges to weighted edges
     graph2 = nx.DiGraph()
@@ -161,7 +171,7 @@ def issue_analysis(issue, graph):
 
 def repo_analysis(repository, path):
     """
-    Analyse a specific GitHub repo. This function may be applied to one repo or also to all its forks.
+    Analyse a specific GitHub repo.
     """
 
     # Add the repo owner to the graph
@@ -218,72 +228,87 @@ def repo_analysis(repository, path):
         # Check the open issues
         for i in repository.get_issues(state="open"):
             issue_analysis(i, graph)
-
         # Check the closed issues
         for i in repository.get_issues(state="closed"):
             issue_analysis(i, graph)
 
-
     # Analyse the commits
 
-    # Check the data from GitHub
+    # Get the log from GitHub, we want the GitHub username
     github_commits = []
-
     for i in repository.get_commits():
-        commit = {
-            "@node": i.sha,
-            "date": i.commit.author.date,
-            "msg": i.commit.message,
-            "author": {
-                "#text": i.author.login,
-                "@email": i.author.email,
-                "avatar_url": i.author.avatar_url
+        if i is not None:
+            commit = {
+                "@node": check_none(i.sha),
+                "date": check_none(i.commit.author.date),
+                "msg": check_none(i.commit.message),
+                "author": {
+                    "#text": check_none(i.author.login) if i.author is not None else 'None',
+                    "@email": check_none(i.author.email) if i.author is not None else 'None',
+                    "avatar_url": check_none(i.author.avatar_url) if i.author is not None else 'None'
                 },
-            "committer": {
-                "#text": i.committer.login,
-                "@email": i.committer.email,
-                "avatar_url": i.committer.avatar_url
+                "committer": {
+                    "#text": check_none(i.committer.login) if i.committer is not None else 'None',
+                    "@email": check_none(i.committer.email) if i.committer is not None else 'None',
+                    "avatar_url": check_none(i.committer.avatar_url) if i.committer is not None else 'None'
                 },
             }
         github_commits.append(commit)
 
-        # Check the data from cloning the repo
-        # it should output a dict
-        git_remote_repo_analysis(url, path, graph)
+    # Unfortunately, it's hard to understand the work on files from GitHub
+    # And ometimes the same person uses different names on GitHub and git.
+    # So we merge the GitHub log with the git log.
 
-        # fare: storia del repo, con username
-        # poi: analisi con clone
-        # dal log analisi con clone, accoppiamo username da qui
+    # Get the log from cloning the repo
+    git_commits = git.git_remote_repo_log(
+        repository.clone_url, path, log_type="commit")
 
-        # Comments for commits
-        github_commits_comments = []
+    # Add file actions from the git log to the GitHub log
+    repo_files = []
+    for k, each_github_commit in enumerate(github_commits):
+        same_commit = filter(lambda commit: commit[
+                             '@node'] == each_github_commit["@node"],
+                             git_commits)
+        github_commits[k]["paths"] = same_commit[0]["paths"]
+        for j in same_commit[0]["paths"]:
+            repo_files.append(j["#text"])
 
-        for i in repository.get_comments():
-            comment = {
-                "@node": i.commit_id,
-                "date": i.created_at,
-                "msg": i.body,
-                "author": {
-                    "#text": i.user.login,
-                    "@email": i.user.email,
-                    "avatar_url": i.user.avatar_url
-                    },
-                }
-            github_commits_comments.append(comment)
+    # Transform the log to the specific format of git.py
+    github_files_log = {}
+    for k, each_file in enumerate(github_commits):
+        filename = each_file["paths"]["#text"]
+        github_files_log[filename] = []
 
+
+    # TODO get graph from the log
+    git.git_repo_analysis(github_commits, graph)
 
     # Debug code
-    for v in graph.nodes_iter(data = True):
+    for v in graph.nodes_iter(data=True):
         print ".........."
         print v
     nx.write_gexf(graph, "test.gexf")
     exit()
 
+    # TODO Get interactions from comments in commits on GitHub
+    github_commits_comments = []
+
+    for i in repository.get_comments():
+        comment = {
+            "@node": i.commit_id,
+            "date": i.created_at,
+            "msg": i.body,
+            "author": {
+                "#text": i.user.login,
+                "@email": i.user.email,
+                "avatar_url": i.user.avatar_url
+            },
+        }
+        github_commits_comments.append(comment)
 
 
 
     # TODO Move this into a separate function as with the issues
-
 
     # TODO
     # Creating the edges from the commits and their comments.
@@ -364,7 +389,6 @@ def repo_analysis(repository, path):
         # for example: if repository.fork is True...
         # from the main repo: get_forks() (paginated list)
         # We can get the starting point with "created_at": "2016-07-23T05:22:58Z",
-
 
     return graph
 
