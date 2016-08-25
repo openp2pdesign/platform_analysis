@@ -256,39 +256,30 @@ def repo_analysis(repository, path):
         github_commits.append(commit)
 
     # Unfortunately, it's hard to understand the work on files from GitHub
-    # And ometimes the same person uses different names on GitHub and git.
+    # And sometimes the same person uses different names on GitHub and git.
     # So we merge the GitHub log with the git log.
 
-    # Get the log from cloning the repo
+    # Get the files log from cloning the repo
     git_commits = git.git_remote_repo_log(
-        repository.clone_url, path, log_type="commit")
+        repository.clone_url, path, log_type="files")
 
-    # Add file actions from the git log to the GitHub log
-    repo_files = []
-    for k, each_github_commit in enumerate(github_commits):
-        same_commit = filter(lambda commit: commit[
-                             '@node'] == each_github_commit["@node"],
-                             git_commits)
-        github_commits[k]["paths"] = same_commit[0]["paths"]
-        for j in same_commit[0]["paths"]:
-            repo_files.append(j["#text"])
-
-    # Transform the log to the specific format of git.py
+    # Add GitHub user details from the GitHub log to the git log of files
+    # By checking the commit sha
     github_files_log = {}
-    for k, each_file in enumerate(github_commits):
-        filename = each_file["paths"]["#text"]
-        github_files_log[filename] = []
+    for k, each_git_file in enumerate(git_commits):
+        github_files_log[each_git_file] = git_commits[each_git_file]
 
-
-    # TODO get graph from the log
-    git.git_repo_analysis(github_commits, graph)
+    # Update the main graph from the git + GitHub log
+    git.git_repo_analysis(github_files_log, graph)
 
     # Debug code
     for v in graph.nodes_iter(data=True):
         print ".........."
         print v
     nx.write_gexf(graph, "test.gexf")
+
     exit()
+
 
     # TODO Get interactions from comments in commits on GitHub
     github_commits_comments = []
