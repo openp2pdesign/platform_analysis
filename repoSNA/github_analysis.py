@@ -224,10 +224,10 @@ def comments_analysis(discussion, graph):
     # Add the e-mail and avatar variable to each
     # participant
     for f in discussion:
-        graph.node[f["author"]["#text"]]['@email'] = str(f["author"]["@email"])
+        graph.node[f["author"]["#text"]]['email'] = str(f["author"]["@email"])
         graph.node[f["author"]["#text"]]['avatar_url'] = str(f["author"][
             "avatar_url"])
-        local_graph.node[f["author"]["#text"]]['@email'] = str(f["author"][
+        local_graph.node[f["author"]["#text"]]['email'] = str(f["author"][
             "@email"])
         local_graph.node[f["author"]["#text"]]['avatar_url'] = str(f["author"][
             "avatar_url"])
@@ -360,6 +360,7 @@ def repo_analysis(repository, path):
     for i in github_commits_comments:
         if i['@node'] not in github_commits_comments_ordered:
             github_commits_comments_ordered[i['@node']] = []
+            # Add the commit to the comments, it is part of the discussion
             commit_index = next((index
                                  for index, d in enumerate(github_commits)
                                  if d['@node'] == i['@node']))
@@ -369,9 +370,11 @@ def repo_analysis(repository, path):
         else:
             github_commits_comments_ordered[i['@node']].append(i)
 
+    # Analyse each commit
     for each_commit in github_commits_comments_ordered:
         comments_analysis(github_commits_comments_ordered[each_commit], graph)
 
+    # Debug
     for v in graph.nodes_iter(data=True):
         print '..........'
         print v
