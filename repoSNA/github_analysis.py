@@ -7,7 +7,6 @@
 # License: LGPL v.3
 #
 
-
 import re
 import string
 
@@ -15,7 +14,6 @@ from github import Github
 
 import networkx as nx
 import git
-
 
 # Global variables
 issues = {}
@@ -88,8 +86,8 @@ def github_analysis(repository, username, userlogin, password, path):
         if len(j[1]) > 0:
             graph2.add_node(
                 j[0],
-                collaborator=j[1]["collaborator"], contributor=j[
-                    1]["contributor"], owner=j[1]["owner"],
+                collaborator=j[1]["collaborator"],
+                contributor=j[1]["contributor"], owner=j[1]["owner"],
                 watcher=j[1]["watcher"])
         else:
             graph2.add_node(j[0])
@@ -99,8 +97,8 @@ def github_analysis(repository, username, userlogin, password, path):
         if (graph.has_edge(subject_id, object_id) and
                 graph2.has_edge(subject_id, object_id)):
             graph2[subject_id][object_id]['weight'] += 1
-        elif (graph.has_edge(subject_id, object_id) and not
-              graph2.has_edge(subject_id, object_id)):
+        elif (graph.has_edge(subject_id, object_id) and
+              not graph2.has_edge(subject_id, object_id)):
             graph2.add_edge(subject_id, object_id, weight=1)
     # Return the resulting weighted graph
     return graph2
@@ -167,6 +165,74 @@ def issue_analysis(issue, graph):
             issues[issue.number]["comments"][j] = "None"
 
     return graph
+
+
+def comments_analysis(discussion, graph):
+    """
+    Analyse the discussion of a GitHub discussion, add edges to the graph and return a graph of the specified discussion.
+    """
+
+    # Local graph variable
+    local_graph = nx.MultiDiGraph()
+
+    # Check all the comments in the commit
+    for j, f in enumerate(discussion):
+
+        # Add an edge to all the previous participants
+        for k in discussion[:j]:
+            graph.add_edge(
+                str(f["author"]["#text"]),
+                str(k["author"]["#text"]),
+                node=str(f["@node"]),
+                date=str(f["date"]),
+                msg=str(f["msg"]))
+
+            local_graph.add_edge(
+                str(f["author"]["#text"]),
+                str(k["author"]["#text"]),
+                node=str(f["@node"]),
+                date=str(f["date"]),
+                msg=str(f["msg"]))
+
+            # Check if there are any username mentions in the body of each
+            # comment, and add an edge if there are any
+            message_body = str(f["msg"])
+            message_body_split = message_body.split()
+            for word in message_body_split:
+                word = word.encode('utf-8')
+                # If the word is an username...
+                if "@" in word:
+                    # Check that it is a username and not an e-mail address
+                    email_check = re.findall(r'[\w\.-]+@[\w\.-]+', word)
+                    # If it is not an e-mail address but an username, add an
+                    # edge
+                    if len(email_check) == 0:
+                        # Remove the @ mention char
+                        word = re.sub(r'@', "", word)
+                        # If the username is a word longer than 0 chars, then
+                        # create an edge from the issue comment author to the
+                        # mentioned username
+                        if len(word) != 0:
+                            # Remove strange punctuation at the end, if any
+                            if word[-1] in string.punctuation:
+                                word = word[:-1]
+                                graph.add_edge(
+                                    str(f["author"]["#text"]), str(word))
+                                local_graph.add_edge(
+                                    str(f["author"]["#text"]), str(word))
+
+    # Add the e-mail and avatar variable to each
+    # participant
+    for f in discussion:
+        graph.node[f["author"]["#text"]]['@email'] = str(f["author"]["@email"])
+        graph.node[f["author"]["#text"]]['avatar_url'] = str(f["author"][
+            "avatar_url"])
+        local_graph.node[f["author"]["#text"]]['@email'] = str(f["author"][
+            "@email"])
+        local_graph.node[f["author"]["#text"]]['avatar_url'] = str(f["author"][
+            "avatar_url"])
+
+    return local_graph
 
 
 def repo_analysis(repository, path):
@@ -243,14 +309,20 @@ def repo_analysis(repository, path):
                 "date": check_none(i.commit.author.date),
                 "msg": check_none(i.commit.message),
                 "author": {
-                    "#text": check_none(i.author.login) if i.author is not None else 'None',
-                    "@email": check_none(i.author.email) if i.author is not None else 'None',
-                    "avatar_url": check_none(i.author.avatar_url) if i.author is not None else 'None'
+                    "#text": check_none(i.author.login)
+                    if i.author is not None else 'None',
+                    "@email": check_none(i.author.email)
+                    if i.author is not None else 'None',
+                    "avatar_url": check_none(i.author.avatar_url)
+                    if i.author is not None else 'None'
                 },
                 "committer": {
-                    "#text": check_none(i.committer.login) if i.committer is not None else 'None',
-                    "@email": check_none(i.committer.email) if i.committer is not None else 'None',
-                    "avatar_url": check_none(i.committer.avatar_url) if i.committer is not None else 'None'
+                    "#text": check_none(i.committer.login)
+                    if i.committer is not None else 'None',
+                    "@email": check_none(i.committer.email)
+                    if i.committer is not None else 'None',
+                    "avatar_url": check_none(i.committer.avatar_url)
+                    if i.committer is not None else 'None'
                 },
             }
         github_commits.append(commit)
@@ -272,32 +344,40 @@ def repo_analysis(repository, path):
     # Update the main graph from the git + GitHub log
     git.git_repo_analysis(github_files_log, graph)
 
-    # Debug code
-    for v in graph.nodes_iter(data=True):
-        print ".........."
-        print v
-    nx.write_gexf(graph, "test.gexf")
-
-    exit()
-
-
-    # TODO Get interactions from comments in commits on GitHub
+    # Get interactions from comments in commits on GitHub
+    git.git_repo_analysis(github_files_log, graph)
     github_commits_comments = []
-
+    github_commits_comments_ordered = {}
     for i in repository.get_comments():
-        comment = {
-            "@node": i.commit_id,
-            "date": i.created_at,
-            "msg": i.body,
-            "author": {
-                "#text": i.user.login,
-                "@email": i.user.email,
-                "avatar_url": i.user.avatar_url
-            },
-        }
+        comment = {'@node': i.commit_id,
+                   'date': i.created_at,
+                   'msg': i.body,
+                   'author': {'#text': i.user.login,
+                              '@email': i.user.email,
+                              'avatar_url': i.user.avatar_url}}
         github_commits_comments.append(comment)
 
+    for i in github_commits_comments:
+        if i['@node'] not in github_commits_comments_ordered:
+            github_commits_comments_ordered[i['@node']] = []
+            commit_index = next((index
+                                 for index, d in enumerate(github_commits)
+                                 if d['@node'] == i['@node']))
+            github_commits_comments_ordered[i['@node']].append(github_commits[
+                commit_index])
+            github_commits_comments_ordered[i['@node']].append(i)
+        else:
+            github_commits_comments_ordered[i['@node']].append(i)
 
+    for each_commit in github_commits_comments_ordered:
+        comments_analysis(github_commits_comments_ordered[each_commit], graph)
+
+    for v in graph.nodes_iter(data=True):
+        print '..........'
+        print v
+
+    nx.write_gexf(graph, 'test.gexf')
+    exit()
 
     # TODO Move this into a separate function as with the issues
 
@@ -325,7 +405,8 @@ def repo_analysis(repository, path):
             print "- Adding an edge from ", f.user.login, "to", i.author.login
 
             for l in range(m):
-                print "- Adding an edge from ", f.user.login, "to", comm[k]["comments"][l]
+                print "- Adding an edge from ", f.user.login, "to", comm[k][
+                    "comments"][l]
                 graph.add_edge(str(f.user.login), str(comm[k]["comments"][l]))
 
     # TODO: check
@@ -344,14 +425,16 @@ def repo_analysis(repository, path):
         print ""
         for k, j in enumerate(issue[a]["comments"]):
             print "Comment author:", issue[a]["comments"][k]
-            print "Adding an edge from:", issue[a]["comments"][k], "to:", issue[a]["author"]
-            graph.add_edge(str(issue[a]["comments"][k]),
-                           str(issue[a]["author"]))
+            print "Adding an edge from:", issue[a]["comments"][
+                k], "to:", issue[a]["author"]
+            graph.add_edge(
+                str(issue[a]["comments"][k]), str(issue[a]["author"]))
 
             for l in range(k):
-                print "Adding an edge from:", issue[a]["comments"][k], "to:", issue[a]["comments"][l]
-                graph.add_edge(str(issue[a]["comments"][l]), str(
-                    issue[a]["comments"][l]))
+                print "Adding an edge from:", issue[a]["comments"][
+                    k], "to:", issue[a]["comments"][l]
+                graph.add_edge(
+                    str(issue[a]["comments"][l]), str(issue[a]["comments"][l]))
 
     print "-----"
     print "PULL REQUESTS"
