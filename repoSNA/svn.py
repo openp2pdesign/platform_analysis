@@ -25,5 +25,6 @@ def get_log(projectpath):
     # Return the full log with files changed at each commit
     return all_commits
 
+
 if __name__ == "__main__":
     pass

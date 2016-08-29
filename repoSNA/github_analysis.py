@@ -14,6 +14,10 @@ from github import Github
 
 import networkx as nx
 import git
+import datetime
+
+# Global variable
+edge_key = 0
 
 
 def check_none(value_to_check):
@@ -63,43 +67,19 @@ def github_analysis(repository, username, userlogin, password, path):
 
     # TODO do repo_analysis( for each fork, checking the starting point
     # TODO every pull request is an issue
-
-    # Get rid of the node "None", it was used to catch the errors of users
-    # that are NoneType
-    if "None" in graph:
-        graph.remove_node('None')
-
     # TODO Get rid of self-loops
 
-    # Converting multiple edges to weighted edges
-    graph2 = nx.DiGraph()
-    for j in list(graph.nodes_iter(data=True)):
-        # Copying all the nodes with their attributes
-        if len(j[1]) > 0:
-            graph2.add_node(
-                j[0],
-                collaborator=j[1]["collaborator"],
-                contributor=j[1]["contributor"], owner=j[1]["owner"],
-                watcher=j[1]["watcher"])
-        else:
-            graph2.add_node(j[0])
-    for j in list(graph.edges_iter(data=True)):
-        subject_id = j[0]
-        object_id = j[1]
-        if (graph.has_edge(subject_id, object_id) and
-                graph2.has_edge(subject_id, object_id)):
-            graph2[subject_id][object_id]['weight'] += 1
-        elif (graph.has_edge(subject_id, object_id) and
-              not graph2.has_edge(subject_id, object_id)):
-            graph2.add_edge(subject_id, object_id, weight=1)
-    # Return the resulting weighted graph
-    return graph2
+    # Return the resulting graph
+    return graph
 
 
 def issue_analysis(issue, graph):
     """
     Analyse the discussion of a single issue.
     """
+
+    # Global variable
+    global edge_key
 
     # Local graph variable
     local_graph = nx.MultiDiGraph()
@@ -110,21 +90,51 @@ def issue_analysis(issue, graph):
 
     # Issue assignee
     if issue.assignee is not None:
+        edge_key += 1
         get_users(
             element=issue.assignee, user_type="issue assignee", graph=graph)
-        graph.add_edge(issue.user.login, issue.assignee.login)
-        local_graph.add_edge(issue.user.login, issue.assignee.login)
+        graph.add_edge(
+            issue.user.login,
+            issue.assignee.login,
+            key=edge_key,
+            node=issue.id,
+            msg=issue.title,
+            start=issue.created_at,
+            endopen=datetime.datetime.now().year)
+        local_graph.add_edge(
+            issue.user.login,
+            issue.assignee.login,
+            key=edge_key,
+            node=issue.id,
+            msg=issue.title,
+            start=issue.created_at,
+            endopen=datetime.datetime.now().year)
     else:
         # No assignee
-        graph.add_edge(issue.user.login, "None")
-        local_graph.add_edge(issue.user.login, "None")
+        edge_key += 1
+        graph.add_edge(
+            issue.user.login,
+            "None",
+            key=edge_key,
+            node=issue.id,
+            msg=issue.title,
+            start=issue.created_at,
+            endopen=datetime.datetime.now().year)
+        local_graph.add_edge(
+            issue.user.login,
+            "None",
+            key=edge_key,
+            node=issue.id,
+            msg=issue.title,
+            start=issue.created_at,
+            endopen=datetime.datetime.now().year)
 
     # Check the comments in the issue
     issues_comments = []
     for j, f in enumerate(issue.get_comments()):
         comment = {'@node': f.id,
                    'date': f.created_at,
-                   'msg': f.body,
+                   'msg': issue.title,  # Use f.body for the comment content
                    'author': {'#text': f.user.login,
                               '@email': f.user.email,
                               'avatar_url': f.user.avatar_url}}
@@ -142,6 +152,9 @@ def comments_analysis(discussion, graph):
     Add edges to the graph and return a graph of the specified discussion.
     """
 
+    # Global variable
+    global edge_key
+
     # Local graph variable
     local_graph = nx.MultiDiGraph()
 
@@ -150,13 +163,16 @@ def comments_analysis(discussion, graph):
 
         # Add an edge to all the previous participants in the discussion
         for k in discussion[:j]:
+            edge_key += 1
             graph.add_edge(
-                f["author"]["#text"], k["author"]["#text"], node=f["@node"],
-                date=f["date"], msg=f["msg"])
+                f["author"]["#text"], k["author"]["#text"], key=edge_key,
+                node=f["@node"], msg=f["msg"], start=f["date"],
+                endopen=datetime.datetime.now().year)
 
             local_graph.add_edge(
-                f["author"]["#text"], k["author"]["#text"], node=f["@node"],
-                date=f["date"], msg=f["msg"])
+                f["author"]["#text"], k["author"]["#text"], key=edge_key,
+                node=f["@node"], date=f["date"], msg=f["msg"], start=f["date"],
+                endopen=datetime.datetime.now().year)
 
             # Check if there are any username mentions in the body of each
             # comment, and add an edge if there are any
@@ -179,9 +195,15 @@ def comments_analysis(discussion, graph):
                             # Remove strange punctuation at the end, if any
                             if word[-1] in string.punctuation:
                                 word = word[:-1]
-                                graph.add_edge(f["author"]["#text"], word)
-                                local_graph.add_edge(f["author"]["#text"],
-                                                     word)
+                                edge_key += 1
+                                graph.add_edge(
+                                    f["author"]["#text"], word, key=edge_key,
+                                    start=f["date"],
+                                    endopen=datetime.datetime.now().year)
+                                local_graph.add_edge(
+                                    f["author"]["#text"], word, key=edge_key,
+                                    start=f["date"],
+                                    endopen=datetime.datetime.now().year)
 
     return local_graph
 
@@ -208,6 +230,9 @@ def repo_analysis(repository, path):
     Analyse a specific GitHub repo.
     """
 
+    # Global variable
+    global edge_key
+
     # The main graph
     graph = nx.MultiDiGraph()
 
@@ -216,36 +241,23 @@ def repo_analysis(repository, path):
 
     # Add the repo watchers to the graph
     for i in repository.get_stargazers():
-        get_users(element=i, user_type="stargazers", graph=graph)
+        get_users(element=i, user_type="stargazer", graph=graph)
 
     # Add the repo collaborators to the graph
     for i in repository.get_collaborators():
-        get_users(element=i, user_type="collaborators", graph=graph)
+        get_users(element=i, user_type="collaborator", graph=graph)
 
     # Add the repo contributors to the graph
     for i in repository.get_contributors():
-        get_users(element=i, user_type="contributors", graph=graph)
+        get_users(element=i, user_type="contributor", graph=graph)
 
     # Add the repo watchers to the graph
     for i in repository.get_watchers():
-        get_users(element=i, user_type="watchers", graph=graph)
+        get_users(element=i, user_type="watcher", graph=graph)
 
     # Add the repo subscribers to the graph
     for i in repository.get_subscribers():
-        get_users(element=i, user_type="subscribers", graph=graph)
-
-    # Check the attributes of every node, and add a "No" when it is not
-    # present. With this you can, for example, use the attribute for graph
-    # partitioning in Gephi
-    for i in graph.nodes():
-        if "owner" not in graph.node[i]:
-            graph.node[i]["owner"] = "No"
-        if "contributor" not in graph.node[i]:
-            graph.node[i]["contributor"] = "No"
-        if "collaborator" not in graph.node[i]:
-            graph.node[i]["collaborator"] = "No"
-        if "watcher" not in graph.node[i]:
-            graph.node[i]["watcher"] = "No"
+        get_users(element=i, user_type="subscriber", graph=graph)
 
     # Analyse issues of the repo
     if repository.has_issues is True:
@@ -297,7 +309,20 @@ def repo_analysis(repository, path):
     # By checking the commit sha
     github_files_log = {}
     for k, each_git_file in enumerate(git_commits):
+        # Collect the log of the files from git
         github_files_log[each_git_file] = git_commits[each_git_file]
+
+    # Check with the log from GitHub, and add username details from it
+    for k in github_files_log:
+        current_sha = github_files_log[k][0]["@node"]
+        for g in github_commits:
+            if g["@node"] == current_sha:
+                github_files_log[k][0]["author"]["#text"] = g["author"][
+                    "#text"]
+                github_files_log[k][0]["author"]["@email"] = g["author"][
+                    "@email"]
+                github_files_log[k][0]["author"]["avatar_url"] = g["author"][
+                    "avatar_url"]
 
     # Update the main graph from the git + GitHub log
     git.git_repo_analysis(github_files_log, graph)
@@ -314,7 +339,6 @@ def repo_analysis(repository, path):
                               '@email': i.user.email,
                               'avatar_url': i.user.avatar_url}}
         github_commits_comments.append(comment)
-
     for i in github_commits_comments:
         if i['@node'] not in github_commits_comments_ordered:
             github_commits_comments_ordered[i['@node']] = []
@@ -328,17 +352,66 @@ def repo_analysis(repository, path):
         else:
             github_commits_comments_ordered[i['@node']].append(i)
 
-    # Analyse each commit
+    # Analyse each commit and its comments
     for each_commit in github_commits_comments_ordered:
         comments_analysis(github_commits_comments_ordered[each_commit], graph)
 
-    exit()
-    # Debug
-    for v in graph.nodes_iter(data=True):
-        print '..........'
-        print v
+    # Clean the graph
 
-    nx.write_gexf(graph, 'test.gexf')
+    # Check the missing attributes of every node, and add a "No" when it is not
+    # present. With this you can, for example, use the attribute for graph
+    # partitioning in Gephi
+    for i in graph.nodes():
+        if "owner" not in graph.node[i]:
+            graph.node[i]["owner"] = "No"
+        if "committer" not in graph.node[i]:
+            graph.node[i]["committer"] = "No"
+        if "stargazer" not in graph.node[i]:
+            graph.node[i]["stargazer"] = "No"
+        if "contributor" not in graph.node[i]:
+            graph.node[i]["contributor"] = "No"
+        if "collaborator" not in graph.node[i]:
+            graph.node[i]["collaborator"] = "No"
+        if "watcher" not in graph.node[i]:
+            graph.node[i]["watcher"] = "No"
+        if "subscriber" not in graph.node[i]:
+            graph.node[i]["subscriber"] = "No"
+        if "issue creator" not in graph.node[i]:
+            graph.node[i]["issue creator"] = "No"
+        if "issue assignee" not in graph.node[i]:
+            graph.node[i]["issue assignee"] = "No"
+        if "email" not in graph.node[i]:
+            graph.node[i]["email"] = "None"
+        if "avatar_url" not in graph.node[i]:
+            graph.node[i]["avatar_url"] = "None"
+
+    # Check the attributes of every edge
+    for v in graph.edges_iter(data=True, keys=True):
+        print "---"
+        print v
+        print ""
+        # for attrib in v[3]:
+        #     # Convert nonetype values to string "None"
+        #     if v[3][attrib] is None:
+        #         #graph.edge[v][attrib] = "None"
+        #         print "NONE"
+        #for attrib in v[1]:
+        #    print attrib, type(v[1][attrib]), v[1][attrib]
+
+    # Fix None nodes and attributes
+    for v in graph.nodes_iter(data=True):
+        for attrib in v[1]:
+            # Convert nonetype values to string "None"
+            if v[1][attrib] is None:
+                graph.node[v[0]][attrib] = "None"
+        # Remove any None node
+        if v[0] == "None" or v[0] is None:
+            graph.remove_node(v[0])
+
+    # TODO remove self-loops
+
+    # Debug
+    #nx.write_gexf(graph, 'test.gexf')
     exit()
 
     print "-----"

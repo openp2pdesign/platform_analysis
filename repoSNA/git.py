@@ -7,7 +7,7 @@
 # License: LGPL v.3
 #
 
-
+import re
 import subprocess
 import os
 import shutil
@@ -17,7 +17,10 @@ import StringIO
 import unicodedata
 from collections import OrderedDict
 
+import github_analysis
+
 import networkx as nx
+import datetime
 
 
 def convert_log_to_dict(input_text):
@@ -57,8 +60,7 @@ def get_commits_log(path):
 
     # Get the verbose log in json
     git_log = subprocess.check_output(
-        ['git', 'log', '--pretty=format:' + log_pretty_format],
-        cwd=path)
+        ['git', 'log', '--pretty=format:' + log_pretty_format], cwd=path)
 
     # Convert to a dict
     all_commits = convert_log_to_dict(git_log)
@@ -80,7 +82,9 @@ def get_commits_log(path):
 
         # Split the output in a list of files
         current_files_list = [
-            line for line in git_commit_files_log.split('\n') if line.strip() != '']
+            line for line in git_commit_files_log.split('\n')
+            if line.strip() != ''
+        ]
 
         # Create an empty dict for files for the current commit
         i["paths"] = {}
@@ -91,7 +95,9 @@ def get_commits_log(path):
             each_file_info = j.split('\t')
 
             i["paths"][k] = {
-                "@action": each_file_info[0], "#text": each_file_info[1]}
+                "@action": each_file_info[0],
+                "#text": each_file_info[1]
+            }
 
     # Format the log like hg and svn
     all_commits = {"log": {"logentry": all_commits}}
@@ -121,8 +127,7 @@ def get_files_log(path):
 
     # Get the verbose log in json
     git_log = subprocess.check_output(
-        ['git', 'log', '--pretty=format:' + log_pretty_format],
-        cwd=path)
+        ['git', 'log', '--pretty=format:' + log_pretty_format], cwd=path)
 
     # Convert to a dict
     all_commits = convert_log_to_dict(git_log)
@@ -147,7 +152,9 @@ def get_files_log(path):
 
         # Split the output in a list of files
         current_files_list = [
-            line for line in git_commit_files_log.split('\n') if line.strip() != '']
+            line for line in git_commit_files_log.split('\n')
+            if line.strip() != ''
+        ]
 
         # Cycle through each file changed in the current commit
         for k, j in enumerate(current_files_list):
@@ -161,8 +168,8 @@ def get_files_log(path):
 
     for k, each_file in enumerate(edited_files):
         current_file_log = subprocess.check_output(
-            ['git', 'log', '--pretty=format:' +
-                log_pretty_format, '--follow', '--', each_file],
+            ['git', 'log', '--pretty=format:' + log_pretty_format, '--follow',
+             '--', each_file],
             cwd=path)
         git_all_files_log[str(each_file)] = convert_log_to_dict(
             current_file_log)
@@ -188,36 +195,47 @@ def git_repo_analysis(git_files_log, graph):
             file_history[l] = {
                 "author": each_commit["author"]["#text"],
                 "email": each_commit["author"]["@email"],
-                "date": each_commit["date"]}
+                "date": each_commit["date"],
+                "@node": each_commit["@node"],
+                "msg": re.sub(r'-', " ", each_commit["msg"])
+            }
 
         # Sort the dict in order to be sure about the chronological order
         sorted_file_history = OrderedDict(
-            sorted(file_history.iteritems(), key=lambda x: x[1]['date']))
+            sorted(
+                file_history.iteritems(), key=lambda x: x[1]['date']))
 
-        # Add an edge from a committer to the previous ones and
-        # if they are not the same person (i.e. it avoids
-        # self-loops)
+        # Add an edge from a committer to the previous ones
         for j in sorted_file_history:
             # Add the committers in case they are not in the graph
             if sorted_file_history[j]["author"] not in graph:
                 graph.add_node(sorted_file_history[j]["author"])
                 graph.node[sorted_file_history[j]["author"]][
                     "email"] = sorted_file_history[j]["email"]
+                graph.node[sorted_file_history[j]["author"]][
+                    "committer"] = "Yes"
             # Look for the interactions
             following_committers = {}
             for l in range(j):
-                following_committers[l] = (
-                    sorted_file_history[l]["author"])
+                following_committers[l] = (sorted_file_history[l]["author"])
             following_committers[j] = sorted_file_history[j]["author"]
             reversed_following_committers = OrderedDict(
-                sorted(following_committers.items(), reverse=True))
+                sorted(
+                    following_committers.items(), reverse=True))
             for t in following_committers:
                 if t < len(reversed_following_committers) - 1:
                     first_actor = reversed_following_committers[t]
                     second_actor = sorted_file_history[j]["author"]
                     # Add the edge
-                    if first_actor != second_actor:
-                        graph.add_edge(first_actor, second_actor)
+                    github_analysis.edge_key += 1
+                    graph.add_edge(
+                        first_actor,
+                        second_actor,
+                        key=github_analysis.edge_key,
+                        node=sorted_file_history[j]["@node"],
+                        msg=re.sub(r'-', " ", sorted_file_history[j]["msg"]),
+                        start=sorted_file_history[j]["date"],
+                        endopen=datetime.datetime.now().year)
 
     return graph
 
@@ -241,8 +259,7 @@ def git_remote_repo_log(url, path, log_type):
 
         # Git clone to the temporary directory
         try:
-            subprocess.check_output(
-                ["git", "clone", url, where], cwd=path)
+            subprocess.check_output(["git", "clone", url, where], cwd=path)
         except subprocess.CalledProcessError as e:
             return e.returncode
 
@@ -281,8 +298,7 @@ def git_remote_repo_analysis(url, path, graph):
 
         # Git clone to the temporary directory
         try:
-            subprocess.check_output(
-                ["git", "clone", url, where], cwd=path)
+            subprocess.check_output(["git", "clone", url, where], cwd=path)
         except subprocess.CalledProcessError as e:
             return e.returncode
 
