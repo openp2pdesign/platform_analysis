@@ -99,6 +99,7 @@ def issue_analysis(issue, graph):
             key=edge_key,
             node=issue.id,
             msg=issue.title,
+            type="issue assignation",
             start=issue.created_at,
             endopen=datetime.datetime.now().year)
         local_graph.add_edge(
@@ -107,25 +108,7 @@ def issue_analysis(issue, graph):
             key=edge_key,
             node=issue.id,
             msg=issue.title,
-            start=issue.created_at,
-            endopen=datetime.datetime.now().year)
-    else:
-        # No assignee
-        edge_key += 1
-        graph.add_edge(
-            issue.user.login,
-            "None",
-            key=edge_key,
-            node=issue.id,
-            msg=issue.title,
-            start=issue.created_at,
-            endopen=datetime.datetime.now().year)
-        local_graph.add_edge(
-            issue.user.login,
-            "None",
-            key=edge_key,
-            node=issue.id,
-            msg=issue.title,
+            type="issue assignation",
             start=issue.created_at,
             endopen=datetime.datetime.now().year)
 
@@ -166,13 +149,13 @@ def comments_analysis(discussion, graph):
             edge_key += 1
             graph.add_edge(
                 f["author"]["#text"], k["author"]["#text"], key=edge_key,
-                node=f["@node"], msg=f["msg"], start=f["date"],
+                node=f["@node"], type="comment", msg=f["msg"], start=f["date"],
                 endopen=datetime.datetime.now().year)
 
             local_graph.add_edge(
                 f["author"]["#text"], k["author"]["#text"], key=edge_key,
-                node=f["@node"], date=f["date"], msg=f["msg"], start=f["date"],
-                endopen=datetime.datetime.now().year)
+                node=f["@node"], type="comment", date=f["date"], msg=f["msg"],
+                start=f["date"], endopen=datetime.datetime.now().year)
 
             # Check if there are any username mentions in the body of each
             # comment, and add an edge if there are any
@@ -198,11 +181,11 @@ def comments_analysis(discussion, graph):
                                 edge_key += 1
                                 graph.add_edge(
                                     f["author"]["#text"], word, key=edge_key,
-                                    start=f["date"],
+                                    type="comment mention", start=f["date"],
                                     endopen=datetime.datetime.now().year)
                                 local_graph.add_edge(
                                     f["author"]["#text"], word, key=edge_key,
-                                    start=f["date"],
+                                    type="comment mention", start=f["date"],
                                     endopen=datetime.datetime.now().year)
 
     return local_graph
@@ -221,8 +204,6 @@ def get_users(element, user_type, graph):
             graph.node[element.login]["avatar_url"] = element.avatar_url
         else:
             graph.node[element.login][user_type] = "Yes"
-    else:
-        graph.node["None"][user_type] = "No"
 
 
 def repo_analysis(repository, path):
@@ -314,15 +295,13 @@ def repo_analysis(repository, path):
 
     # Check with the log from GitHub, and add username details from it
     for k in github_files_log:
-        current_sha = github_files_log[k][0]["@node"]
-        for g in github_commits:
-            if g["@node"] == current_sha:
-                github_files_log[k][0]["author"]["#text"] = g["author"][
-                    "#text"]
-                github_files_log[k][0]["author"]["@email"] = g["author"][
-                    "@email"]
-                github_files_log[k][0]["author"]["avatar_url"] = g["author"][
-                    "avatar_url"]
+        for l, j in enumerate(github_files_log[k]):
+            current_sha = github_files_log[k][l]["@node"]
+            for g in github_commits:
+                if g["@node"] == current_sha:
+                    github_files_log[k][l]["author"]["#text"] = g["author"]["#text"]
+                    github_files_log[k][l]["author"]["@email"] = g["author"]["@email"]
+                    github_files_log[k][l]["author"]["avatar_url"] = g["author"]["avatar_url"]
 
     # Update the main graph from the git + GitHub log
     git.git_repo_analysis(github_files_log, graph)

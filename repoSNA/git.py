@@ -233,6 +233,7 @@ def git_repo_analysis(git_files_log, graph):
                         second_actor,
                         key=github_analysis.edge_key,
                         node=sorted_file_history[j]["@node"],
+                        type="commit",
                         msg=re.sub(r'-', " ", sorted_file_history[j]["msg"]),
                         start=sorted_file_history[j]["date"],
                         endopen=datetime.datetime.now().year)
