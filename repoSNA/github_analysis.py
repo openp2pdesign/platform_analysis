@@ -124,12 +124,13 @@ def issue_analysis(issue, graph):
         get_users(element=f.user, user_type="issue commenter", graph=graph)
         issues_comments.append(comment)
 
-    comments_analysis(issues_comments, local_graph)
+    comments_analysis
+(issues_comments, local_graph, comment_type="issue comment")
 
     return local_graph
 
 
-def comments_analysis(discussion, graph):
+def comments_analysis(discussion, graph, comment_type):
     """
     Analyse the discussion of a GitHub discussion.
     Add edges to the graph and return a graph of the specified discussion.
@@ -148,14 +149,26 @@ def comments_analysis(discussion, graph):
         for k in discussion[:j]:
             edge_key += 1
             graph.add_edge(
-                f["author"]["#text"], k["author"]["#text"], key=edge_key,
-                node=f["@node"], type="comment", msg=f["msg"], start=f["date"],
+                f["author"]["#text"],
+                k["author"]["#text"],
+                key=edge_key,
+                node=f["@node"],
+                type=comment_type,
+                msg=f["msg"],
+                start=f["date"],
                 endopen=datetime.datetime.now().year)
 
             local_graph.add_edge(
-                f["author"]["#text"], k["author"]["#text"], key=edge_key,
-                node=f["@node"], type="comment", date=f["date"], msg=f["msg"],
-                start=f["date"], endopen=datetime.datetime.now().year)
+                f["author"]["#text"],
+                k["author"]["#text"],
+                key=edge_key,
+                type=comment_type,
+                node=f["@node"],
+                type="comment",
+                date=f["date"],
+                msg=f["msg"],
+                start=f["date"],
+                endopen=datetime.datetime.now().year)
 
             # Check if there are any username mentions in the body of each
             # comment, and add an edge if there are any
@@ -333,7 +346,7 @@ def repo_analysis(repository, path):
 
     # Analyse each commit and its comments
     for each_commit in github_commits_comments_ordered:
-        comments_analysis(github_commits_comments_ordered[each_commit], graph)
+        comments_analysis(github_commits_comments_ordered[each_commit], graph, comment_type="commit comment")
 
     # Clean the graph
 
@@ -364,7 +377,7 @@ def repo_analysis(repository, path):
         if "avatar_url" not in graph.node[i]:
             graph.node[i]["avatar_url"] = "None"
 
-    # Check the attributes of every edge
+    # Check the missing attributes of every edge
     for v in graph.edges_iter(data=True, keys=True):
         print "---"
         print v
