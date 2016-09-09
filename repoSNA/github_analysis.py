@@ -120,100 +120,116 @@ def pull_requests_analysis(repository, graph):
     # Local graph variable
     local_graph = nx.MultiDiGraph()
 
-    # Closed pull requests
-    for f, i in enumerate(repository.get_pulls(state="closed")):
-        # Add edge from who merged the pull request to who did it
-        if i.merged_by.login not in graph.nodes():
-            get_users(i.merged_by, user_type="forker", graph)
-        if i.user.login not in graph.nodes():
-            get_users(i.user, user_type="forker", graph)
-        graph.add_edge(
-             i.merged_by.login,
-             i.user.login,
-             key=edge_key,
-             node=i.merge_commit_sha,
-             msg=i.title,
-             type="merged pull request",
-             start=i.merged_at,
-             endopen=datetime.datetime.now().year)
-        local_graph.add_edge(
-             i.merged_by.login,
-             i.user.login,
-             key=edge_key,
-             node=i.merge_commit_sha,
-             msg=i.title,
-             type="merged pull request",
-             start=i.merged_at,
-             endopen=datetime.datetime.now().year)
+    # Check both open and closed pull requests
+    # Open pull requests are not merged
+    pull_request_states = ["closed", ["open"]]
 
-        # Add edge from who did the pull requests to the repo owner
-        if repository.owner.login not in graph.nodes():
-            get_users(repository.owner, user_type="created a pull request", graph)
-        graph.add_edge(
-             i.user.login,
-             repository.owner.login,
-             key=edge_key,
-             node=i.id,
-             msg=i.title,
-             type="merged pull request",
-             start=i.created_at,
-             endopen=datetime.datetime.now().year)
-        local_graph.add_edge(
-             i.user.login,
-             repository.owner.login,
-             key=edge_key,
-             node=i.id,
-             msg=i.title,
-             type="created a pull request",
-             start=i.created_at,
-             endopen=datetime.datetime.now().year)
+    for state in pull_request_states:
+        for f, i in enumerate(repository.get_pulls(state=state)):
+            if state == "closed":
+                # Add edge from who merged the pull request to who did it
+                if i.merged_by.login not in graph.nodes():
+                    get_users(
+                        i.merged_by,
+                        user_type="forker",
+                        graph)
+                if i.user.login not in graph.nodes():
+                    get_users(
+                        i.user,
+                        user_type="forker",
+                        graph)
+                graph.add_edge(
+                     i.merged_by.login,
+                     i.user.login,
+                     key=edge_key,
+                     node=i.merge_commit_sha,
+                     msg=i.title,
+                     type="merged pull request",
+                     start=i.merged_at,
+                     endopen=datetime.datetime.now().year)
+                local_graph.add_edge(
+                     i.merged_by.login,
+                     i.user.login,
+                     key=edge_key,
+                     node=i.merge_commit_sha,
+                     msg=i.title,
+                     type="merged pull request",
+                     start=i.merged_at,
+                     endopen=datetime.datetime.now().year)
 
-        # Add edge from owner to assignee
-        if i.assignee not None:
-            if i.assignee not in graph.nodes():
-                get_users(i.assignee, user_type="pull request assignee", graph)
+            # Add edge from who did the pull requests to the repo owner
+            if repository.owner.login not in graph.nodes():
+                get_users(
+                    repository.owner,
+                    user_type="created a pull request",
+                    graph)
             graph.add_edge(
+                 i.user.login,
                  repository.owner.login,
-                 i.assignee,
                  key=edge_key,
                  node=i.id,
                  msg=i.title,
-                 type="pull request assignee",
+                 type="merged pull request",
+                 start=i.created_at,
+                 endopen=datetime.datetime.now().year)
+            local_graph.add_edge(
+                 i.user.login,
+                 repository.owner.login,
+                 key=edge_key,
+                 node=i.id,
+                 msg=i.title,
+                 type="created a pull request",
                  start=i.created_at,
                  endopen=datetime.datetime.now().year)
 
-        # Comments
-        for j in i.get_comments():
-            print j
-        for j in i.get_review_comments():
-            print j
-        for j in i.get_issue_comments():
-            print j
+            # Add edge from owner to assignee
+            if i.assignee not None:
+                if i.assignee not in graph.nodes():
+                    get_users(
+                        i.assignee,
+                        user_type="pull request assignee",
+                        graph)
+                graph.add_edge(
+                     repository.owner.login,
+                     i.assignee,
+                     key=edge_key,
+                     node=i.id,
+                     msg=i.title,
+                     type="pull request assignee",
+                     start=i.created_at,
+                     endopen=datetime.datetime.now().year)
 
-        # Check the comments in the issue
-        pull_request_comments = []
-        for j in i.get_comments():
-            comment = {'@node': j.id,
-                       'date': j.created_at,
-                       'msg': issue.title,  # Use f.body for the comment content
-                       'author': {'#text': j.user.login,
-                                  '@email': j.user.email,
-                                  'avatar_url': j.user.avatar_url}}
-            get_users(element=j.user, user_type="pull request commenter", graph=graph)
-            pull_request_comments.append(comment)
+            # Comments
+            # for j in i.get_comments():
+            #     print j
+            # for j in i.get_review_comments():
+            #     print j
+            # for j in i.get_issue_comments():
+            #     print j
 
-        comments_analysis(
-            pull_request_comments,
-            graph,
-            comment_type="pull request comment")
-        comments_analysis(
-            pull_request_comments,
-            local_graph,
-            comment_type="pull request comment")
+            # Check the comments in the pull request
+            pull_request_comments = []
+            for j in i.get_comments():
+                comment = {'@node': j.id,
+                           'date': j.created_at,
+                           'msg': j.title,
+                           'author': {'#text': j.user.login,
+                                      '@email': j.user.email,
+                                      'avatar_url': j.user.avatar_url}}
+                get_users(
+                    element=j.user,
+                    user_type="pull request commenter",
+                    graph=graph)
+                pull_request_comments.append(comment)
 
-        # Open pull requests
-        for i in repository.get_pulls(state="open"):
-            print "----"
+            comments_analysis(
+                pull_request_comments,
+                graph,
+                comment_type="pull request comment")
+            comments_analysis(
+                pull_request_comments,
+                local_graph,
+                comment_type="pull request comment")
 
     return local_graph
 
