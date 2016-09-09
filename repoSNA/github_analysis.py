@@ -53,24 +53,169 @@ def github_analysis(repository, username, userlogin, password, path):
     g = Github(userlogin, password)
     starting_repository_object = g.get_user(username).get_repo(repository)
 
+
+
+    repository = starting_repository_object
+
+
+
+    exit()
     repo_analysis(repository=starting_repository_object, path=path)
 
-    # Then we analyse forks of the starting repo
-    # for f, i in enumerate(b.get_forks()):
-    #     testing = i.__dict__
-    #     print(testing["_rawData"]["full_name"])
-    #     print(testing["_rawData"]["name"])
-    #     print(testing["_rawData"]["clone_url"])
-    #     print(testing["_rawData"]["owner"]["avatar_url"])
-    #     print(testing["_rawData"]["owner"]["login"])
-    #     print("...")
+    # forks
+    for k in i.get_forks():
+        print k.full_name
 
-    # TODO do repo_analysis( for each fork, checking the starting point
-    # TODO every pull request is an issue
     # TODO Get rid of self-loops
 
     # Return the resulting graph
     return graph
+
+
+def fork_analysis(repository, graph):
+    """
+    Analyse the forks of a repository.
+    """
+
+    # Global variable
+    global edge_key
+
+    # Local graph variable
+    local_graph = nx.MultiDiGraph()
+
+    for f, i in enumerate(repository.get_forks()):
+        # Add edge from the forker to the owner
+        if i.owner.login not in graph.nodes():
+            get_users(i.owner.login, user_type="forker", graph)
+        graph.add_edge(
+             i.owner.login,
+             repository.owner.login,
+             key=edge_key,
+             node=f,
+             msg=i.full_name,
+             type="fork",
+             start=i.created_at,
+             endopen=datetime.datetime.now().year)
+        local_graph.add_edge(
+             i.owner.login,
+             repository.owner.login,
+             key=edge_key,
+             node=f,
+             msg=i.full_name,
+             type="fork",
+             start=i.created_at,
+             endopen=datetime.datetime.now().year)
+
+    return local_graph
+
+
+def pull_requests_analysis(repository, graph):
+    """
+    Analyse the discussion of pull requests of a repository.
+    """
+
+    # Global variable
+    global edge_key
+
+    # Local graph variable
+    local_graph = nx.MultiDiGraph()
+
+    # Closed pull requests
+    for f, i in enumerate(repository.get_pulls(state="closed")):
+        # Add edge from who merged the pull request to who did it
+        if i.merged_by.login not in graph.nodes():
+            get_users(i.merged_by, user_type="forker", graph)
+        if i.user.login not in graph.nodes():
+            get_users(i.user, user_type="forker", graph)
+        graph.add_edge(
+             i.merged_by.login,
+             i.user.login,
+             key=edge_key,
+             node=i.merge_commit_sha,
+             msg=i.title,
+             type="merged pull request",
+             start=i.merged_at,
+             endopen=datetime.datetime.now().year)
+        local_graph.add_edge(
+             i.merged_by.login,
+             i.user.login,
+             key=edge_key,
+             node=i.merge_commit_sha,
+             msg=i.title,
+             type="merged pull request",
+             start=i.merged_at,
+             endopen=datetime.datetime.now().year)
+
+        # Add edge from who did the pull requests to the repo owner
+        if repository.owner.login not in graph.nodes():
+            get_users(repository.owner, user_type="created a pull request", graph)
+        graph.add_edge(
+             i.user.login,
+             repository.owner.login,
+             key=edge_key,
+             node=i.id,
+             msg=i.title,
+             type="merged pull request",
+             start=i.created_at,
+             endopen=datetime.datetime.now().year)
+        local_graph.add_edge(
+             i.user.login,
+             repository.owner.login,
+             key=edge_key,
+             node=i.id,
+             msg=i.title,
+             type="created a pull request",
+             start=i.created_at,
+             endopen=datetime.datetime.now().year)
+
+        # Add edge from owner to assignee
+        if i.assignee not None:
+            if i.assignee not in graph.nodes():
+                get_users(i.assignee, user_type="pull request assignee", graph)
+            graph.add_edge(
+                 repository.owner.login,
+                 i.assignee,
+                 key=edge_key,
+                 node=i.id,
+                 msg=i.title,
+                 type="pull request assignee",
+                 start=i.created_at,
+                 endopen=datetime.datetime.now().year)
+
+        # Comments
+        for j in i.get_comments():
+            print j
+        for j in i.get_review_comments():
+            print j
+        for j in i.get_issue_comments():
+            print j
+
+        # Check the comments in the issue
+        pull_request_comments = []
+        for j in i.get_comments():
+            comment = {'@node': j.id,
+                       'date': j.created_at,
+                       'msg': issue.title,  # Use f.body for the comment content
+                       'author': {'#text': j.user.login,
+                                  '@email': j.user.email,
+                                  'avatar_url': j.user.avatar_url}}
+            get_users(element=j.user, user_type="pull request commenter", graph=graph)
+            pull_request_comments.append(comment)
+
+        comments_analysis(
+            pull_request_comments,
+            graph,
+            comment_type="pull request comment")
+        comments_analysis(
+            pull_request_comments,
+            local_graph,
+            comment_type="pull request comment")
+
+        # Open pull requests
+        for i in repository.get_pulls(state="open"):
+            print "----"
+
+    return local_graph
 
 
 def issue_analysis(issue, graph):
@@ -124,8 +269,14 @@ def issue_analysis(issue, graph):
         get_users(element=f.user, user_type="issue commenter", graph=graph)
         issues_comments.append(comment)
 
-    comments_analysis
-(issues_comments, local_graph, comment_type="issue comment")
+    comments_analysis(
+        issues_comments,
+        graph,
+        comment_type="issue comment")
+    comments_analysis(
+        issues_comments,
+        local_graph,
+        comment_type="issue comment")
 
     return local_graph
 
@@ -164,7 +315,6 @@ def comments_analysis(discussion, graph, comment_type):
                 key=edge_key,
                 type=comment_type,
                 node=f["@node"],
-                type="comment",
                 date=f["date"],
                 msg=f["msg"],
                 start=f["date"],
@@ -377,19 +527,6 @@ def repo_analysis(repository, path):
         if "avatar_url" not in graph.node[i]:
             graph.node[i]["avatar_url"] = "None"
 
-    # Check the missing attributes of every edge
-    for v in graph.edges_iter(data=True, keys=True):
-        print "---"
-        print v
-        print ""
-        # for attrib in v[3]:
-        #     # Convert nonetype values to string "None"
-        #     if v[3][attrib] is None:
-        #         #graph.edge[v][attrib] = "None"
-        #         print "NONE"
-        #for attrib in v[1]:
-        #    print attrib, type(v[1][attrib]), v[1][attrib]
-
     # Fix None nodes and attributes
     for v in graph.nodes_iter(data=True):
         for attrib in v[1]:
@@ -400,6 +537,54 @@ def repo_analysis(repository, path):
         if v[0] == "None" or v[0] is None:
             graph.remove_node(v[0])
 
+    # Pull requests analysis
+    for i in repository.get_pulls(state="closed"):
+        print "----"
+        print i.html_url
+        print i.merged
+        print i.merged_by
+        print i.user
+        print i.assignee
+        print i.id
+        print i.sha
+        print i.merge_commit_sha
+        print i.title
+        print i.created_at
+        print i.merged_at
+        print i.closed_at
+        print i.body # for mentions
+        print i.state
+        print ""
+        for j in get_comments():
+            print j
+        for j in get_review_comments():
+            print j
+        for j in get_issue_comments():
+            print j
+
+    exit()
+
+    # Forks Analysis
+    print "MY REPO FORKS", repository.forks_count
+    for f, i in enumerate(repository.get_forks()):
+         # corrent = i.__dict__
+         # full = corrent["_rawData"]
+         print "------- NEW FORK"
+         print i.fork
+         print i.owner
+         print i.owner.login
+         print i.owner.email
+         print i.owner.avatar_url
+         print i.updated_at
+         print i.created_at
+         print i.full_name
+         print i.clone_url
+         print i.html_url
+         print i.forks_count
+         print "   "
+
+    # TODO do repo_analysis( for each fork, checking the starting point
+    # TODO every pull request is an issue
     # TODO remove self-loops
 
     # Debug
