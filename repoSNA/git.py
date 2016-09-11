@@ -16,6 +16,7 @@ from splitstream import splitfile
 import StringIO
 import unicodedata
 from collections import OrderedDict
+from dateutil.parser import parse
 
 import github_analysis
 
@@ -209,11 +210,11 @@ def git_repo_analysis(git_files_log, graph):
         for j in sorted_file_history:
             # Add the committers in case they are not in the graph
             if sorted_file_history[j]["author"] not in graph:
-                graph.add_node(sorted_file_history[j]["author"])
-                graph.node[sorted_file_history[j]["author"]][
-                    "email"] = sorted_file_history[j]["email"]
-                graph.node[sorted_file_history[j]["author"]][
-                    "committer"] = "Yes"
+                graph.add_node(
+                    sorted_file_history[j]["author"], committer="Yes",
+                    email=sorted_file_history[j]["email"])
+            else:
+                graph.node[sorted_file_history[j]["author"]]["committer"] = "Yes"
             # Look for the interactions
             following_committers = {}
             for l in range(j):
@@ -232,10 +233,9 @@ def git_repo_analysis(git_files_log, graph):
                         first_actor,
                         second_actor,
                         key=github_analysis.edge_key,
-                        node=sorted_file_history[j]["@node"],
-                        type="commit",
+                        node=sorted_file_history[j]["@node"], type="commit",
                         msg=re.sub(r'-', " ", sorted_file_history[j]["msg"]),
-                        start=sorted_file_history[j]["date"],
+                        start=parse(sorted_file_history[j]["date"]),
                         endopen=datetime.datetime.now().year)
 
     return graph
