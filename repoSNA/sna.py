@@ -9,13 +9,21 @@
 
 
 import networkx as nx
+import datetime
 
 
-# SNA on a dictionary
-def convert_log_to_dict(input_text):
-    graph = nx.DiGraph()
-    return graph
+def save_graph(graph, filename):
+    """
+    Transform date on a graph to string and save as a graphml
+    """
+    for u, v, key, attr in graph.edges(data=True, keys=True):
+        if type(attr["start"]) is datetime.datetime:
+            attr["start"] = attr["start"].strftime('%Y/%m/%d-%H:%M:%S')
+        attr["endopen"] = str(attr["endopen"])
 
+    nx.write_graphml(graph, filename)
+
+    return
 
 if __name__ == "__main__":
     pass
