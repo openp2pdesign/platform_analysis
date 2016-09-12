@@ -21,6 +21,8 @@ import datetime
 edge_key = 0
 # The main graph
 graph = nx.MultiDiGraph()
+# Log in to GitHub
+github_login = Github()
 
 
 def check_none(value_to_check):
@@ -36,12 +38,13 @@ def github_login(userlogin, username, password):
     for a given username.
     """
     # Log in to GitHub
-    g = Github(userlogin, password)
+    global github_login
+    github_login = Github(userlogin, password)
 
     results = {}
 
     # Load the repositories of the username
-    for k, repo in enumerate(g.get_user(username).get_repos()):
+    for k, repo in enumerate(github_login.get_user(username).get_repos()):
         results[k] = {"name": repo.name, "data": repo}
 
     return results
@@ -53,8 +56,9 @@ def github_analysis(repository, username, userlogin, password, path):
     """
 
     # Log in to GitHub
-    g = Github(userlogin, password)
-    repository_object = g.get_user(username).get_repo(repository)
+    global github_login
+    github_login = Github(userlogin, password)
+    repository_object = github_login.get_user(username).get_repo(repository)
 
     repo_analysis(repository=repository_object, path=path, graph=graph)
 
@@ -77,29 +81,35 @@ def fork_analysis(repository, graph):
     local_graph = nx.MultiDiGraph()
 
     for f, i in enumerate(repository.get_forks()):
-        # Add edge from the forker to the owner
-        if i.owner.login not in graph.nodes():
-            get_users(element=i.owner.login, user_type="forker", graph=graph)
-            get_users(
-                element=i.owner.login, user_type="forker", graph=local_graph)
-        graph.add_edge(
-            i.owner.login,
-            repository.owner.login,
-            key=edge_key,
-            node=f,
-            msg=i.full_name,
-            type="fork",
-            start=i.created_at,
-            endopen=datetime.datetime.now().year)
-        local_graph.add_edge(
-            i.owner.login,
-            repository.owner.login,
-            key=edge_key,
-            node=f,
-            msg=i.full_name,
-            type="fork",
-            start=i.created_at,
-            endopen=datetime.datetime.now().year)
+        if i.owner is not None and repository.owner is not None:
+            # Add edge from the forker to the owner
+            if i.owner.login not in graph.nodes():
+                get_users(
+                    element=i.owner.login,
+                    user_type="forker",
+                    graph=graph)
+                get_users(
+                    element=i.owner.login,
+                    user_type="forker",
+                    graph=local_graph)
+            graph.add_edge(
+                i.owner.login,
+                repository.owner.login,
+                key=edge_key,
+                node=f,
+                msg=i.full_name,
+                type="fork",
+                start=i.created_at,
+                endopen=datetime.datetime.now().year)
+            local_graph.add_edge(
+                i.owner.login,
+                repository.owner.login,
+                key=edge_key,
+                node=f,
+                msg=i.full_name,
+                type="fork",
+                start=i.created_at,
+                endopen=datetime.datetime.now().year)
 
     return local_graph
 
@@ -123,64 +133,66 @@ def pull_requests_analysis(repository, graph):
         for f, i in enumerate(repository.get_pulls(state=state)):
             if state == "closed":
                 # Add edge from who merged the pull request to who did it
-                if i.merged_by.login not in graph.nodes():
-                    get_users(
-                        element=i.merged_by, user_type="forker", graph=graph)
-                    get_users(
-                        element=i.merged_by,
-                        user_type="forker",
-                        graph=local_graph)
-                if i.user.login not in graph.nodes():
-                    get_users(element=i.user, user_type="forker", graph=graph)
-                    get_users(
-                        element=i.user, user_type="forker", graph=local_graph)
-                graph.add_edge(
-                    i.merged_by.login,
-                    i.user.login,
-                    key=edge_key,
-                    node=i.merge_commit_sha,
-                    msg=i.title,
-                    type="merged pull request",
-                    start=i.merged_at,
-                    endopen=datetime.datetime.now().year)
-                local_graph.add_edge(
-                    i.merged_by.login,
-                    i.user.login,
-                    key=edge_key,
-                    node=i.merge_commit_sha,
-                    msg=i.title,
-                    type="merged pull request",
-                    start=i.merged_at,
-                    endopen=datetime.datetime.now().year)
+                if i.merged_by is not None and i.user is not None:
+                    if i.merged_by.login not in graph.nodes():
+                        get_users(
+                            element=i.merged_by, user_type="forker", graph=graph)
+                        get_users(
+                            element=i.merged_by,
+                            user_type="forker",
+                            graph=local_graph)
+                    if i.user.login not in graph.nodes():
+                        get_users(element=i.user, user_type="forker", graph=graph)
+                        get_users(
+                            element=i.user, user_type="forker", graph=local_graph)
+                    graph.add_edge(
+                        i.merged_by.login,
+                        i.user.login,
+                        key=edge_key,
+                        node=i.merge_commit_sha,
+                        msg=i.title,
+                        type="merged pull request",
+                        start=i.merged_at,
+                        endopen=datetime.datetime.now().year)
+                    local_graph.add_edge(
+                        i.merged_by.login,
+                        i.user.login,
+                        key=edge_key,
+                        node=i.merge_commit_sha,
+                        msg=i.title,
+                        type="merged pull request",
+                        start=i.merged_at,
+                        endopen=datetime.datetime.now().year)
 
             # Add edge from who did the pull requests to the repo owner
-            if repository.owner.login not in graph.nodes():
-                get_users(
-                    element=repository.owner,
-                    user_type="created a pull request",
-                    graph=graph)
-                get_users(
-                    element=repository.owner,
-                    user_type="created a pull request",
-                    graph=local_graph)
-            graph.add_edge(
-                i.user.login,
-                repository.owner.login,
-                key=edge_key,
-                node=i.id,
-                msg=i.title,
-                type="merged pull request",
-                start=i.created_at,
-                endopen=datetime.datetime.now().year)
-            local_graph.add_edge(
-                i.user.login,
-                repository.owner.login,
-                key=edge_key,
-                node=i.id,
-                msg=i.title,
-                type="created a pull request",
-                start=i.created_at,
-                endopen=datetime.datetime.now().year)
+            if repository.owner is not None and i.user is not None:
+                if repository.owner.login not in graph.nodes():
+                    get_users(
+                        element=repository.owner,
+                        user_type="created a pull request",
+                        graph=graph)
+                    get_users(
+                        element=repository.owner,
+                        user_type="created a pull request",
+                        graph=local_graph)
+                graph.add_edge(
+                    i.user.login,
+                    repository.owner.login,
+                    key=edge_key,
+                    node=i.id,
+                    msg=i.title,
+                    type="merged pull request",
+                    start=i.created_at,
+                    endopen=datetime.datetime.now().year)
+                local_graph.add_edge(
+                    i.user.login,
+                    repository.owner.login,
+                    key=edge_key,
+                    node=i.id,
+                    msg=i.title,
+                    type="created a pull request",
+                    start=i.created_at,
+                    endopen=datetime.datetime.now().year)
 
             # Add edge from owner to assignee
             if i.assignee is not None:
@@ -363,16 +375,30 @@ def get_users(element, user_type, graph):
     """
     Get users of a specific type from the GitHub repo.
     """
-
-    if element is not None:
-        if element.login not in graph:
-            graph.add_node(element.login)
-            graph.node[element.login]["Label"] = element.login
-            graph.node[element.login][user_type] = "Yes"
-            graph.node[element.login]["email"] = element.email
-            graph.node[element.login]["avatar_url"] = element.avatar_url
-        else:
-            graph.node[element.login][user_type] = "Yes"
+    try:
+        if element is not None:
+            if element.login not in graph:
+                graph.add_node(element.login)
+                graph.node[element.login]["Label"] = element.login
+                graph.node[element.login][user_type] = "Yes"
+                graph.node[element.login]["email"] = element.email
+                graph.node[element.login]["avatar_url"] = element.avatar_url
+            else:
+                graph.node[element.login][user_type] = "Yes"
+    except:
+        try:
+            new_element = github_login.get_user(element)
+            if new_element is not None:
+                if new_element.login not in graph:
+                    graph.add_node(new_element.login)
+                    graph.node[new_element.login]["Label"] = new_element.login
+                    graph.node[new_element.login][user_type] = "Yes"
+                    graph.node[new_element.login]["email"] = new_element.email
+                    graph.node[new_element.login]["avatar_url"] = new_element.avatar_url
+                else:
+                    graph.node[new_element.login][user_type] = "Yes"
+        except:
+            print("There was an error with",element,"which is of type", type(element))
 
 
 def repo_analysis(repository, path, graph):
