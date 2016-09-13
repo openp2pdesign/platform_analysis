@@ -304,9 +304,14 @@ def issue_analysis(issue, graph):
         get_users(element=f.user, user_type="issue commenter", graph=graph)
         issues_comments.append(comment)
 
-    comments_analysis(issues_comments, graph, comment_type="issue comment")
     comments_analysis(
-        issues_comments, local_graph, comment_type="issue comment")
+        issues_comments,
+        graph,
+        comment_type="issue comment")
+    comments_analysis(
+        issues_comments,
+        local_graph,
+        comment_type="issue comment")
 
     return local_graph
 
@@ -333,7 +338,6 @@ def comments_analysis(discussion, graph, comment_type):
                 f["author"]["#text"], k["author"]["#text"], key=edge_key,
                 node=f["@node"], type=comment_type, msg=f["msg"],
                 start=f["date"], endopen=datetime.datetime.now().year)
-
             local_graph.add_edge(
                 f["author"]["#text"], k["author"]["#text"], key=edge_key,
                 type=comment_type, node=f["@node"], date=f["date"],
@@ -423,6 +427,16 @@ def repo_analysis(repository, path, graph):
     # Add the repo owner to the graph
     get_users(element=repository.owner, user_type="owner", graph=graph)
     get_users(element=repository.owner, user_type="owner", graph=local_graph)
+
+    # Add an edge from the owner to the repo, to mark the creation of the repo
+    graph.add_edge(
+        repository.owner.login,
+        repository.full_name,
+        key=edge_key,
+        type="repository creation",
+        start=repository.created_at,
+        endopen=datetime.datetime.now().year)
+    edge_key += 1
 
     # Add the repo watchers to the graph
     for i in repository.get_stargazers():
