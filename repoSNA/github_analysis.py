@@ -85,9 +85,7 @@ def fork_analysis(repository, graph):
             # Add edge from the forker to the owner
             if i.owner.login not in graph.nodes():
                 get_users(
-                    element=i.owner.login,
-                    user_type="forker",
-                    graph=graph)
+                    element=i.owner.login, user_type="forker", graph=graph)
                 get_users(
                     element=i.owner.login,
                     user_type="forker",
@@ -136,15 +134,20 @@ def pull_requests_analysis(repository, graph):
                 if i.merged_by is not None and i.user is not None:
                     if i.merged_by.login not in graph.nodes():
                         get_users(
-                            element=i.merged_by, user_type="forker", graph=graph)
+                            element=i.merged_by,
+                            user_type="forker",
+                            graph=graph)
                         get_users(
                             element=i.merged_by,
                             user_type="forker",
                             graph=local_graph)
                     if i.user.login not in graph.nodes():
-                        get_users(element=i.user, user_type="forker", graph=graph)
                         get_users(
-                            element=i.user, user_type="forker", graph=local_graph)
+                            element=i.user, user_type="forker", graph=graph)
+                        get_users(
+                            element=i.user,
+                            user_type="forker",
+                            graph=local_graph)
                     graph.add_edge(
                         i.merged_by.login,
                         i.user.login,
@@ -379,10 +382,11 @@ def get_users(element, user_type, graph):
         if element is not None:
             if element.login not in graph:
                 graph.add_node(element.login)
-                graph.node[element.login]["Label"] = element.login
+                graph.node[element.login]["Label"] = check_none(element.login)
                 graph.node[element.login][user_type] = "Yes"
-                graph.node[element.login]["email"] = element.email
-                graph.node[element.login]["avatar_url"] = element.avatar_url
+                graph.node[element.login]["email"] = check_none(element.email)
+                graph.node[element.login]["avatar_url"] = check_none(
+                    element.avatar_url)
             else:
                 graph.node[element.login][user_type] = "Yes"
     except:
@@ -391,14 +395,18 @@ def get_users(element, user_type, graph):
             if new_element is not None:
                 if new_element.login not in graph:
                     graph.add_node(new_element.login)
-                    graph.node[new_element.login]["Label"] = new_element.login
+                    graph.node[new_element.login]["Label"] = check_none(
+                        new_element.login)
                     graph.node[new_element.login][user_type] = "Yes"
-                    graph.node[new_element.login]["email"] = new_element.email
-                    graph.node[new_element.login]["avatar_url"] = new_element.avatar_url
+                    graph.node[new_element.login]["email"] = check_none(
+                        new_element.email)
+                    graph.node[new_element.login]["avatar_url"] = check_none(
+                        new_element.avatar_url)
                 else:
                     graph.node[new_element.login][user_type] = "Yes"
         except:
-            print("There was an error with",element,"which is of type", type(element))
+            print("There was an error with", element, "which is of type",
+                  type(element))
 
 
 def repo_analysis(repository, path, graph):
@@ -502,12 +510,15 @@ def repo_analysis(repository, path, graph):
             current_sha = github_files_log[k][l]["@node"]
             for g in github_commits:
                 if g["@node"] == current_sha:
-                    github_files_log[k][l]["author"]["#text"] = g["author"][
-                        "#text"]
-                    github_files_log[k][l]["author"]["@email"] = g["author"][
-                        "@email"]
-                    github_files_log[k][l]["author"]["avatar_url"] = g[
-                        "author"]["avatar_url"]
+                    if g["author"]["#text"] != "None":
+                        github_files_log[k][l]["author"]["#text"] = g[
+                            "author"]["#text"]
+                    if g["author"]["@email"] != "None":
+                        github_files_log[k][l]["author"]["@email"] = g[
+                            "author"]["@email"]
+                    if g["author"]["avatar_url"] != "None":
+                        github_files_log[k][l]["author"]["avatar_url"] = g[
+                            "author"]["avatar_url"]
                     github_files_log[k][l]["author"]["committer"] = "Yes"
 
     # Update the main graph from the git + GitHub log
