@@ -294,6 +294,14 @@ def issue_analysis(issue, graph):
 
     # Check the comments in the issue
     issues_comments = []
+    first_issue_comment = {
+        '@node': issue.id,
+        'date': issue.created_at,
+        'msg': issue.title,  # Use f.body for the comment content
+        'author': {'#text': issue.user.login,
+                   '@email': issue.user.email,
+                   'avatar_url': issue.user.avatar_url}}
+    issues_comments.append(first_issue_comment)
     for j, f in enumerate(issue.get_comments()):
         comment = {'@node': f.id,
                    'date': f.created_at,
@@ -330,7 +338,6 @@ def comments_analysis(discussion, graph, comment_type):
 
     # Check all the comments in the commit
     for j, f in enumerate(discussion):
-
         # Add an edge to all the previous participants in the discussion
         for k in discussion[:j]:
             edge_key += 1
@@ -465,11 +472,9 @@ def repo_analysis(repository, path, graph):
 
     # Analyse issues of the repo
     if repository.has_issues is True:
-        # Check the open issues
         for i in repository.get_issues(state="open"):
             issue_analysis(i, graph)
             issue_analysis(i, local_graph)
-        # Check the closed issues
         for i in repository.get_issues(state="closed"):
             issue_analysis(i, graph)
             issue_analysis(i, local_graph)
@@ -581,7 +586,7 @@ def repo_analysis(repository, path, graph):
     # partitioning in Gephi
     for i in graph.nodes():
         if "Label" not in graph.node[i]:
-            graph.node[i]["Label"] = i
+            graph.node[i]["Label"] = str(i)
         if "owner" not in graph.node[i]:
             graph.node[i]["owner"] = "No"
         if "committer" not in graph.node[i]:
@@ -609,7 +614,7 @@ def repo_analysis(repository, path, graph):
 
     for i in local_graph.nodes():
         if "Label" not in local_graph.node[i]:
-            local_graph.node[i]["Label"] = i
+            local_graph.node[i]["Label"] = str(i)
         if "owner" not in local_graph.node[i]:
             local_graph.node[i]["owner"] = "No"
         if "committer" not in local_graph.node[i]:
