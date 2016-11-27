@@ -75,6 +75,10 @@ def graph_to_pandas_time_series(graph):
         # Add the new row to the DataFrame of actions
         time_dataframe.loc[len(time_dataframe)] = new_row
 
+        # Convert column strings to datetimes
+        time_dataframe['start'] = pd.to_datetime(time_dataframe['start'])
+        time_dataframe['endopen'] = pd.to_datetime(time_dataframe['endopen'])
+
     return time_dataframe
 
 
