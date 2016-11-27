@@ -10,7 +10,9 @@ setup(
         "python-dateutil",
         "six",
         "splitstream",
-        "xmltodict"
+        "xmltodict",
+        "pandas",
+        "datetime"
     ],
     version='0.10',
     description='A Python library for Social Network Analysis of online collaboration platforms and tools like Twitter, YouTube and Git, Hg, SVN, GitHub, GitLab, BitBucket repositories',
