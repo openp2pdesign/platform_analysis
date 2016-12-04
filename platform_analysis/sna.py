@@ -52,7 +52,7 @@ def graph_to_pandas_time_series(graph):
         ])
 
     # Iterate over edges to create a DataFrame of actions
-    for i in time_dataframe.edges_iter(data=True):
+    for i in graph.edges_iter(data=True):
         if "node" in i[2]:
             node = i[2]["node"]
         else:
