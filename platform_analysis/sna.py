@@ -94,7 +94,7 @@ def time_analysis(data, focus, interaction):
     # Define the DataFrame index as time-based
     data.index = data['start']
     # List of types of interaction
-    types = data["type"].value_counts()
+    interaction_types = data["type"].value_counts()
 
     # Users stats
     # Empty dictionary of DataFrames (one for each user)
@@ -109,12 +109,12 @@ def time_analysis(data, focus, interaction):
         users = data["0"].value_counts()
     # Add empty DataFrame for each active user
     for i in users.index:
-        users_stats[i] = pd.DataFrame(columns=list(types.index))
+        users_stats[i] = pd.DataFrame(columns=list(interaction_types.index))
     # Fill each Dataframe of active users with zeroes, as the default value
-    for i in df.iterrows():
-        users_stats[i[1]["0"]].loc[i[1]["start"]] = [0] * len(list(type_stats.index))
+    for i in data.iterrows():
+        users_stats[i[1]["0"]].loc[i[1]["start"]] = [0] * len(list(interaction_types.index))
     # Add a 1 to each timed interaction
-    for i in df.iterrows():
+    for i in data.iterrows():
         users_stats[i[1]["0"]].ix[i[1]["start"], i[1]["type"]] = 1
 
     # Global stats
@@ -124,9 +124,9 @@ def time_analysis(data, focus, interaction):
     global_stats = pd.concat(data_list)
 
     # Final output
-    if focus.lowercase() == "global":
+    if focus.lower() == "global":
         return global_stats
-    elif focus.lowercase() == "user":
+    elif focus.lower() == "user":
         return users_stats
     else:
         return global_stats
@@ -138,9 +138,9 @@ def type_stats(data, focus):
     Helper function for speeding up analysis.
     """
 
-    if focus.lowercase() == "global":
+    if focus.lower() == "global":
         return data.sum(axis=0)
-    elif focus.lowercase() == "user":
+    elif focus.lower() == "user":
         users_stats = {}
         for i in data:
             users_stats[i] = data[i].sum(axis=0)
