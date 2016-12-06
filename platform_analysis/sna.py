@@ -87,6 +87,8 @@ def time_analysis(data, focus, interaction):
     """
     Analyse a pandas time series DataFrame.
     Returns a DataFrame for global status, a dictionary of DataFrames for users stats.
+
+    Plot it with: data.resample('M').sum().plot(kind="bar", figsize=(20,6))
     """
 
     # Define the DataFrame index as time-based
@@ -125,10 +127,26 @@ def time_analysis(data, focus, interaction):
     # Final output
     if focus.lowercase() == "global":
         return global_stats
-    elif focus.lowercas() == "user":
+    elif focus.lowercase() == "user":
         return users_stats
     else:
         return global_stats
+
+
+def type_stats(data, focus):
+    """
+    Return a DataFrame or a dict of DataFrames for global type stats.
+    Helper function for speeding up analysis.
+    """
+
+    if focus.lowercase() == "global":
+        return data.sum(axis=0)
+    elif focus.lowercase() == "user":
+        users_stats = {}
+        for i in data:
+            users_stats[i] = data[i].sum(axis=0)
+    else:
+        return data.sum(axis=0)
 
 
 if __name__ == "__main__":
