@@ -112,8 +112,7 @@ def time_analysis(data, focus, interaction):
         users_stats[i] = pd.DataFrame(columns=list(types.index))
     # Fill each Dataframe of active users with zeroes, as the default value
     for i in df.iterrows():
-        users_stats[i[1]["0"]].loc[i[1]["start"]] =
-        [0] * len(list(type_stats.index))
+        users_stats[i[1]["0"]].loc[i[1]["start"]] = [0] * len(list(type_stats.index))
     # Add a 1 to each timed interaction
     for i in df.iterrows():
         users_stats[i[1]["0"]].ix[i[1]["start"], i[1]["type"]] = 1
