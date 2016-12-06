@@ -83,10 +83,10 @@ def graph_to_pandas_time_series(graph):
     return time_dataframe
 
 
-def time_analysis(data, focus, interaction):
+def time_analysis(data, focus, interaction, structure):
     """
     Analyse a pandas time series DataFrame.
-    Returns a DataFrame for global status, a dictionary of DataFrames for users stats.
+    Returns a DataFrame for global status, a dictionary of DataFrames for users stats. If structure == "combined", returns a Series with all the interactions merged.
 
     Plot it with: data.resample('M').sum().plot(kind="bar", figsize=(20,6))
     """
@@ -122,6 +122,12 @@ def time_analysis(data, focus, interaction):
     for i in users_stats:
         data_list.append(users_stats[i])
     global_stats = pd.concat(data_list)
+
+    # Merge interactions if required by the user
+    if structure.lower() == "combined":
+        global_stats = global_stats.sum(axis=1)
+        for i in users_stats:
+            users_stats[i] = users_stats[i].sum(axis=1)
 
     # Final output
     if focus.lower() == "global":
