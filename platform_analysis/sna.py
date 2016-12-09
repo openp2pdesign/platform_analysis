@@ -86,9 +86,7 @@ def graph_to_pandas_time_series(graph):
 def time_analysis(data, focus, interaction, structure):
     """
     Analyse a pandas time series DataFrame.
-    Returns a DataFrame for global status, a dictionary of DataFrames for users stats. If structure == "combined", returns a Series with all the interactions merged.
-
-    Plot it with: data.resample('M').sum().plot(kind="bar", figsize=(20,6))
+    Returns a DataFrame. If structure == "combined", returns a Series with all the interactions merged.
     """
 
     # Define the DataFrame index as time-based
@@ -99,6 +97,7 @@ def time_analysis(data, focus, interaction, structure):
     # Users stats
     # Empty dictionary of DataFrames (one for each user)
     users_stats = {}
+
     # Users maybe starting (0) or receiving (1) the interaction
     # Create a list of users
     if interaction == 0:
@@ -107,6 +106,7 @@ def time_analysis(data, focus, interaction, structure):
         users = data["1"].value_counts()
     else:
         users = data["0"].value_counts()
+
     # Add empty DataFrame for each active user
     for i in users.index:
         users_stats[i] = pd.DataFrame(columns=list(interaction_types.index))
@@ -119,8 +119,10 @@ def time_analysis(data, focus, interaction, structure):
 
     # Global stats
     data_list = []
+    index_list = []
     for i in users_stats:
         data_list.append(users_stats[i])
+        index_list.append(i)
     global_stats = pd.concat(data_list)
 
     # Merge interactions if required by the user
@@ -128,6 +130,9 @@ def time_analysis(data, focus, interaction, structure):
         global_stats = global_stats.sum(axis=1)
         for i in users_stats:
             users_stats[i] = users_stats[i].sum(axis=1)
+
+    # Transform users_stats into a multi index DataFrame
+    users_stats = pd.concat(data_list, keys=index_list)
 
     # Final output
     if focus.lower() == "global":
