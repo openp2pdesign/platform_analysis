@@ -16,6 +16,7 @@ import networkx as nx
 import git
 import datetime
 
+
 # Global variables
 # Edge counting
 edge_key = 0
@@ -389,6 +390,7 @@ def get_users(element, user_type, graph):
     """
     Get users of a specific type from the GitHub repo.
     """
+    
     try:
         if element is not None:
             if element.login not in graph:
