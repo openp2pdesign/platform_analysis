@@ -11,7 +11,6 @@
 import networkx as nx
 import datetime
 import pandas as pd
-import seaborn as sns
 
 
 def save_graph(graph, filename, self_loops):
