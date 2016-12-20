@@ -7,21 +7,10 @@
 # License: LGPL v.3
 #
 
-import re
-import subprocess
-import os
-import shutil
+
 import json
 from splitstream import splitfile
 import StringIO
-import unicodedata
-from collections import OrderedDict
-from dateutil.parser import parse
-
-import github_analysis
-
-import networkx as nx
-import datetime
 
 
 def convert_log_to_dict(input_text):
