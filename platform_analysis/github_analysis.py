@@ -30,6 +30,7 @@ def check_none(value_to_check):
     """
     Helper function that checks for None values from the GitHub APIs.
     """
+
     return value_to_check if value_to_check is not None else "None"
 
 
@@ -38,6 +39,7 @@ def github_login(userlogin, username, password):
     Login on GitHub in order to retrieve a dict of repositories
     for a given username.
     """
+
     # Log in to GitHub
     global github_login
     github_login = Github(userlogin, password)
@@ -390,33 +392,38 @@ def get_users(element, user_type, graph):
     """
     Get users of a specific type from the GitHub repo.
     """
-    
+
+    print element
+    print element.login
+    print element.email
+    print ""
+
     try:
         if element is not None:
             if element.login not in graph:
-                graph.add_node(element.login)
-                graph.node[element.login]["Label"] = check_none(element.login)
-                graph.node[element.login][user_type] = "Yes"
-                graph.node[element.login]["email"] = check_none(element.email)
-                graph.node[element.login]["avatar_url"] = check_none(
+                graph.add_node(str(element.login))
+                graph.node[str(element.login)]["Label"] = str(element.login)
+                graph.node[str(element.login)][user_type] = "Yes"
+                graph.node[str(element.login)]["email"] = check_none(element.email)
+                graph.node[str(element.login)]["avatar_url"] = check_none(
                     element.avatar_url)
             else:
-                graph.node[element.login][user_type] = "Yes"
+                graph.node[str(element.login)][user_type] = "Yes"
     except:
         try:
             new_element = github_login.get_user(element)
             if new_element is not None:
                 if new_element.login not in graph:
-                    graph.add_node(new_element.login)
-                    graph.node[new_element.login]["Label"] = check_none(
+                    graph.add_node(str(new_element.login))
+                    graph.node[str(new_element.login)]["Label"] = check_none(
                         new_element.login)
-                    graph.node[new_element.login][user_type] = "Yes"
-                    graph.node[new_element.login]["email"] = check_none(
+                    graph.node[str(new_element.login)][user_type] = "Yes"
+                    graph.node[str(new_element.login)]["email"] = check_none(
                         new_element.email)
-                    graph.node[new_element.login]["avatar_url"] = check_none(
+                    graph.node[str(new_element.login)]["avatar_url"] = check_none(
                         new_element.avatar_url)
                 else:
-                    graph.node[new_element.login][user_type] = "Yes"
+                    graph.node[str(new_element.login)][user_type] = "Yes"
         except:
             print("There was an error with", element, "which is of type",
                   type(element))
@@ -593,6 +600,8 @@ def repo_analysis(repository, path, graph):
             graph.node[i]["owner"] = "No"
         if "committer" not in graph.node[i]:
             graph.node[i]["committer"] = "No"
+        if "forker" not in graph.node[i]:
+            graph.node[i]["forker"] = "No"
         if "stargazer" not in graph.node[i]:
             graph.node[i]["stargazer"] = "No"
         if "contributor" not in graph.node[i]:
@@ -607,6 +616,8 @@ def repo_analysis(repository, path, graph):
             graph.node[i]["issue creator"] = "No"
         if "issue commenter" not in graph.node[i]:
             graph.node[i]["issue commenter"] = "No"
+        if "pull request assignee" not in graph.node[i]:
+            graph.node[i]["pull request assignee"] = "No"
         if "issue assignee" not in graph.node[i]:
             graph.node[i]["issue assignee"] = "No"
         if "email" not in graph.node[i]:
@@ -621,6 +632,8 @@ def repo_analysis(repository, path, graph):
             local_graph.node[i]["owner"] = "No"
         if "committer" not in local_graph.node[i]:
             local_graph.node[i]["committer"] = "No"
+        if "forker" not in local_graph.node[i]:
+            local_graph.node[i]["forker"] = "No"
         if "stargazer" not in local_graph.node[i]:
             local_graph.node[i]["stargazer"] = "No"
         if "contributor" not in local_graph.node[i]:
@@ -635,6 +648,8 @@ def repo_analysis(repository, path, graph):
             local_graph.node[i]["issue creator"] = "No"
         if "issue commenter" not in local_graph.node[i]:
             local_graph.node[i]["issue commenter"] = "No"
+        if "pull request assignee" not in local_graph.node[i]:
+            local_graph.node[i]["pull request assignee"] = "No"
         if "issue assignee" not in local_graph.node[i]:
             local_graph.node[i]["issue assignee"] = "No"
         if "email" not in local_graph.node[i]:

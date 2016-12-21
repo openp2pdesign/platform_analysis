@@ -227,6 +227,9 @@ def git_repo_analysis(git_files_log, graph):
                 if t < len(reversed_following_committers) - 1:
                     first_actor = reversed_following_committers[t]
                     second_actor = sorted_file_history[j]["author"]
+                    # Add the nodes of the edge
+                    graph.add_node(first_actor, Label=first_actor)
+                    graph.add_node(first_actor, Label=second_actor)
                     # Add the edge
                     github_analysis.edge_key += 1
                     graph.add_edge(
