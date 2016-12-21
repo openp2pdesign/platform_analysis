@@ -53,6 +53,57 @@ def github_login(userlogin, username, password):
     return results
 
 
+def clean_graph(graph):
+    """
+    Check the missing attributes of every node, and add a "No" when it is not
+    present. With this you can, for example, use the attribute for graph
+    partitioning in Gephi
+    """
+
+    for i in graph.nodes():
+        graph.node[i]["Label"] = str(i)
+        if "owner" not in graph.node[i]:
+            graph.node[i]["owner"] = "No"
+        if "committer" not in graph.node[i]:
+            graph.node[i]["committer"] = "No"
+        if "forker" not in graph.node[i]:
+            graph.node[i]["forker"] = "No"
+        if "stargazer" not in graph.node[i]:
+            graph.node[i]["stargazer"] = "No"
+        if "contributor" not in graph.node[i]:
+            graph.node[i]["contributor"] = "No"
+        if "collaborator" not in graph.node[i]:
+            graph.node[i]["collaborator"] = "No"
+        if "watcher" not in graph.node[i]:
+            graph.node[i]["watcher"] = "No"
+        if "subscriber" not in graph.node[i]:
+            graph.node[i]["subscriber"] = "No"
+        if "issue creator" not in graph.node[i]:
+            graph.node[i]["issue creator"] = "No"
+        if "issue commenter" not in graph.node[i]:
+            graph.node[i]["issue commenter"] = "No"
+        if "pull request assignee" not in graph.node[i]:
+            graph.node[i]["pull request assignee"] = "No"
+        if "issue assignee" not in graph.node[i]:
+            graph.node[i]["issue assignee"] = "No"
+        if "email" not in graph.node[i]:
+            graph.node[i]["email"] = "None"
+        if "avatar_url" not in graph.node[i]:
+            graph.node[i]["avatar_url"] = "None"
+
+    # Fix None nodes and attributes
+    for v in graph.nodes_iter(data=True):
+        for attrib in v[1]:
+            # Convert nonetype values to string "None"
+            if v[1][attrib] is None:
+                graph.node[v[0]][attrib] = "None"
+        # Remove any None node
+        if v[0] == "None" or v[0] is None:
+            graph.remove_node(v[0])
+
+    return graph
+
+
 def github_analysis(repository, username, userlogin, password, path):
     """
     Analyse a specific repository.
@@ -68,6 +119,8 @@ def github_analysis(repository, username, userlogin, password, path):
     fork_analysis(repository=repository_object, graph=graph)
 
     pull_requests_analysis(repository=repository_object, graph=graph)
+
+    clean_graph(graph=graph)
 
     return graph
 
@@ -132,7 +185,8 @@ def pull_requests_analysis(repository, graph):
 
     for state in pull_request_states:
         for f, i in enumerate(repository.get_pulls(state=state)):
-            if state == "closed":
+            if i.is_merged() is True:
+            # if state == "closed":
                 # Add edge from who merged the pull request to who did it
                 if i.merged_by is not None and i.user is not None:
                     if i.merged_by.login not in graph.nodes():
@@ -393,16 +447,11 @@ def get_users(element, user_type, graph):
     Get users of a specific type from the GitHub repo.
     """
 
-    print element
-    print element.login
-    print element.email
-    print ""
-
     try:
         if element is not None:
-            if element.login not in graph:
+            if str(element.login) not in graph:
                 graph.add_node(str(element.login))
-                graph.node[str(element.login)]["Label"] = str(element.login)
+                # graph.node[str(element.login)]["Label"] = str(element.login)
                 graph.node[str(element.login)][user_type] = "Yes"
                 graph.node[str(element.login)]["email"] = check_none(element.email)
                 graph.node[str(element.login)]["avatar_url"] = check_none(
@@ -413,15 +462,12 @@ def get_users(element, user_type, graph):
         try:
             new_element = github_login.get_user(element)
             if new_element is not None:
-                if new_element.login not in graph:
+                if str(new_element.login) not in graph:
                     graph.add_node(str(new_element.login))
-                    graph.node[str(new_element.login)]["Label"] = check_none(
-                        new_element.login)
+                    # graph.node[str(new_element.login)]["Label"] = check_none(new_element.login)
                     graph.node[str(new_element.login)][user_type] = "Yes"
-                    graph.node[str(new_element.login)]["email"] = check_none(
-                        new_element.email)
-                    graph.node[str(new_element.login)]["avatar_url"] = check_none(
-                        new_element.avatar_url)
+                    graph.node[str(new_element.login)]["email"] = check_none(new_element.email)
+                    graph.node[str(new_element.login)]["avatar_url"] = check_none(new_element.avatar_url)
                 else:
                     graph.node[str(new_element.login)][user_type] = "Yes"
         except:
@@ -587,94 +633,6 @@ def repo_analysis(repository, path, graph):
             github_commits_comments_ordered[each_commit],
             local_graph,
             comment_type="commit comment")
-
-    # Clean the graph
-
-    # Check the missing attributes of every node, and add a "No" when it is not
-    # present. With this you can, for example, use the attribute for graph
-    # partitioning in Gephi
-    for i in graph.nodes():
-        if "Label" not in graph.node[i]:
-            graph.node[i]["Label"] = str(i)
-        if "owner" not in graph.node[i]:
-            graph.node[i]["owner"] = "No"
-        if "committer" not in graph.node[i]:
-            graph.node[i]["committer"] = "No"
-        if "forker" not in graph.node[i]:
-            graph.node[i]["forker"] = "No"
-        if "stargazer" not in graph.node[i]:
-            graph.node[i]["stargazer"] = "No"
-        if "contributor" not in graph.node[i]:
-            graph.node[i]["contributor"] = "No"
-        if "collaborator" not in graph.node[i]:
-            graph.node[i]["collaborator"] = "No"
-        if "watcher" not in graph.node[i]:
-            graph.node[i]["watcher"] = "No"
-        if "subscriber" not in graph.node[i]:
-            graph.node[i]["subscriber"] = "No"
-        if "issue creator" not in graph.node[i]:
-            graph.node[i]["issue creator"] = "No"
-        if "issue commenter" not in graph.node[i]:
-            graph.node[i]["issue commenter"] = "No"
-        if "pull request assignee" not in graph.node[i]:
-            graph.node[i]["pull request assignee"] = "No"
-        if "issue assignee" not in graph.node[i]:
-            graph.node[i]["issue assignee"] = "No"
-        if "email" not in graph.node[i]:
-            graph.node[i]["email"] = "None"
-        if "avatar_url" not in graph.node[i]:
-            graph.node[i]["avatar_url"] = "None"
-
-    for i in local_graph.nodes():
-        if "Label" not in local_graph.node[i]:
-            local_graph.node[i]["Label"] = str(i)
-        if "owner" not in local_graph.node[i]:
-            local_graph.node[i]["owner"] = "No"
-        if "committer" not in local_graph.node[i]:
-            local_graph.node[i]["committer"] = "No"
-        if "forker" not in local_graph.node[i]:
-            local_graph.node[i]["forker"] = "No"
-        if "stargazer" not in local_graph.node[i]:
-            local_graph.node[i]["stargazer"] = "No"
-        if "contributor" not in local_graph.node[i]:
-            local_graph.node[i]["contributor"] = "No"
-        if "collaborator" not in local_graph.node[i]:
-            local_graph.node[i]["collaborator"] = "No"
-        if "watcher" not in local_graph.node[i]:
-            local_graph.node[i]["watcher"] = "No"
-        if "subscriber" not in local_graph.node[i]:
-            local_graph.node[i]["subscriber"] = "No"
-        if "issue creator" not in local_graph.node[i]:
-            local_graph.node[i]["issue creator"] = "No"
-        if "issue commenter" not in local_graph.node[i]:
-            local_graph.node[i]["issue commenter"] = "No"
-        if "pull request assignee" not in local_graph.node[i]:
-            local_graph.node[i]["pull request assignee"] = "No"
-        if "issue assignee" not in local_graph.node[i]:
-            local_graph.node[i]["issue assignee"] = "No"
-        if "email" not in local_graph.node[i]:
-            local_graph.node[i]["email"] = "None"
-        if "avatar_url" not in local_graph.node[i]:
-            local_graph.node[i]["avatar_url"] = "None"
-
-    # Fix None nodes and attributes
-    for v in graph.nodes_iter(data=True):
-        for attrib in v[1]:
-            # Convert nonetype values to string "None"
-            if v[1][attrib] is None:
-                graph.node[v[0]][attrib] = "None"
-        # Remove any None node
-        if v[0] == "None" or v[0] is None:
-            graph.remove_node(v[0])
-
-    for v in local_graph.nodes_iter(data=True):
-        for attrib in v[1]:
-            # Convert nonetype values to string "None"
-            if v[1][attrib] is None:
-                local_graph.node[v[0]][attrib] = "None"
-        # Remove any None node
-        if v[0] == "None" or v[0] is None:
-            local_graph.remove_node(v[0])
 
     return local_graph
 
