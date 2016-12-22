@@ -85,7 +85,8 @@ def graph_to_pandas_time_series(graph):
 def time_analysis(data, focus, interaction, structure):
     """
     Analyse a pandas time series DataFrame.
-    Returns a DataFrame. If structure == "combined", returns a Series with all the interactions merged.
+    Returns a DataFrame. If structure == "combined".
+    Returns a Series with all the interactions merged.
     """
 
     # Define the DataFrame index as time-based
