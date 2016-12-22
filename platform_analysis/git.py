@@ -202,12 +202,15 @@ def git_repo_analysis(git_files_log, graph):
             }
 
         # Sort the dict in order to be sure about the chronological order
+        # of the file history
         sorted_file_history = OrderedDict(
             sorted(
                 file_history.iteritems(), key=lambda x: x[1]['date']))
 
         # Add an edge from a committer to the previous ones
+        # since there are interactions on the same file
         for j in sorted_file_history:
+
             # Add the committers in case they are not in the graph
             if sorted_file_history[j]["author"] not in graph:
                 graph.add_node(
@@ -215,17 +218,19 @@ def git_repo_analysis(git_files_log, graph):
                     email=sorted_file_history[j]["email"])
             else:
                 graph.node[sorted_file_history[j]["author"]]["committer"] = "Yes"
+
             # Look for the interactions
             following_committers = {}
-            for l in range(j):
-                following_committers[l] = (sorted_file_history[l]["author"])
-            following_committers[j] = sorted_file_history[j]["author"]
+            for m in range(j):
+                following_committers[m] = (sorted_file_history[m])
+            #following_committers[j] = sorted_file_history[j]["author"]
             reversed_following_committers = OrderedDict(
                 sorted(
                     following_committers.items(), reverse=True))
+
             for t in following_committers:
                 if t < len(reversed_following_committers) - 1:
-                    first_actor = reversed_following_committers[t]
+                    first_actor = reversed_following_committers[t]["author"]
                     second_actor = sorted_file_history[j]["author"]
                     # Add the nodes of the edge
                     graph.add_node(first_actor, Label=first_actor)
@@ -238,8 +243,9 @@ def git_repo_analysis(git_files_log, graph):
                         key=github_analysis.edge_key,
                         node=sorted_file_history[j]["@node"], type="commit",
                         msg=re.sub(r'-', " ", sorted_file_history[j]["msg"]),
-                        start=parse(sorted_file_history[j]["date"]),
+                        start=parse(reversed_following_committers[t]["date"]),
                         endopen=datetime.datetime.now().year)
+                    # start=parse(sorted_file_history[j]["date"]),
 
     return graph
 
