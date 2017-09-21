@@ -1,4 +1,4 @@
-Installation
+Tutorial
 =============================================
 
 *platform_analysis* is available as a normal Python module on pypi_ that can be installed with:
