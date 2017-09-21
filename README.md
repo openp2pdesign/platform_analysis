@@ -7,6 +7,10 @@ A Python library for Social Network Analysis of online collaboration platforms a
 
 `pip install platform_analysis`
 
+## Documentation
+
+[http://platform-analysis.readthedocs.io/en/latest/](http://platform-analysis.readthedocs.io/en/latest/)
+
 ## License
 
 [LGPL](https://www.gnu.org/licenses/lgpl-3.0.en.html)
