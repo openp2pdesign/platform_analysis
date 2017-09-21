@@ -1,0 +1,864 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>platform_analysis.github_analysis &mdash; platform_analysis 0.2 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+        <link rel="search" title="Search" href="../../search.html"/>
+    <link rel="top" title="platform_analysis 0.2 documentation" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> platform_analysis
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">platform_analysis</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>platform_analysis.github_analysis</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for platform_analysis.github_analysis</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- encoding: utf-8 -*-</span>
+<span class="c1">#</span>
+<span class="c1"># Social Network Analysis of Git, Hg, SVN, GitHub, BitBucket repositories</span>
+<span class="c1">#</span>
+<span class="c1"># Author: Massimo Menichinelli</span>
+<span class="c1"># Homepage: http://www.openp2pdesign.org</span>
+<span class="c1"># License: LGPL v.3</span>
+<span class="c1">#</span>
+
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">string</span>
+
+<span class="kn">from</span> <span class="nn">github</span> <span class="k">import</span> <span class="n">Github</span>
+
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">import</span> <span class="nn">git</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+
+<span class="c1"># Global variables</span>
+<span class="c1"># Edge counting</span>
+<span class="n">edge_key</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="c1"># The main graph</span>
+<span class="n">graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">()</span>
+<span class="c1"># Log in to GitHub</span>
+<span class="n">github_login</span> <span class="o">=</span> <span class="n">Github</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="check_none"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.github_analysis.check_none">[docs]</a><span class="k">def</span> <span class="nf">check_none</span><span class="p">(</span><span class="n">value_to_check</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Helper function that checks for None values from the GitHub APIs.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">value_to_check</span> <span class="k">if</span> <span class="n">value_to_check</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;None&quot;</span></div>
+
+
+<div class="viewcode-block" id="github_login"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.github_analysis.github_login">[docs]</a><span class="k">def</span> <span class="nf">github_login</span><span class="p">(</span><span class="n">userlogin</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Login on GitHub in order to retrieve a dict of repositories</span>
+<span class="sd">    for a given username.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Log in to GitHub</span>
+    <span class="k">global</span> <span class="n">github_login</span>
+    <span class="n">github_login</span> <span class="o">=</span> <span class="n">Github</span><span class="p">(</span><span class="n">userlogin</span><span class="p">,</span> <span class="n">password</span><span class="p">)</span>
+
+    <span class="n">results</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># Load the repositories of the username</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">repo</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">github_login</span><span class="o">.</span><span class="n">get_user</span><span class="p">(</span><span class="n">username</span><span class="p">)</span><span class="o">.</span><span class="n">get_repos</span><span class="p">()):</span>
+        <span class="n">results</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">repo</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">repo</span><span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="clean_graph"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.github_analysis.clean_graph">[docs]</a><span class="k">def</span> <span class="nf">clean_graph</span><span class="p">(</span><span class="n">graph</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Check the missing attributes of every node, and add a &quot;No&quot; when it is not</span>
+<span class="sd">    present. With this you can, for example, use the attribute for graph</span>
+<span class="sd">    partitioning in Gephi</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+        <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;Label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;owner&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;owner&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;No&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;committer&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;committer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;No&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;forker&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;forker&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;No&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;stargazer&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;stargazer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;No&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;contributor&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;contributor&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;No&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;collaborator&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;collaborator&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;No&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;watcher&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;watcher&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;No&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;subscriber&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;subscriber&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;No&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;issue creator&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;issue creator&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;No&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;issue commenter&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;issue commenter&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;No&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;pull request assignee&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;pull request assignee&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;No&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;issue assignee&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;issue assignee&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;No&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;email&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;email&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;None&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;avatar_url&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;avatar_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;None&quot;</span>
+
+    <span class="c1"># Fix None nodes and attributes</span>
+    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes_iter</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">attrib</span> <span class="ow">in</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="c1"># Convert nonetype values to string &quot;None&quot;</span>
+            <span class="k">if</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">attrib</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]][</span><span class="n">attrib</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;None&quot;</span>
+        <span class="c1"># Remove any None node</span>
+        <span class="k">if</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;None&quot;</span> <span class="ow">or</span> <span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">remove_node</span><span class="p">(</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">graph</span></div>
+
+
+<div class="viewcode-block" id="github_analysis"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.github_analysis.github_analysis">[docs]</a><span class="k">def</span> <span class="nf">github_analysis</span><span class="p">(</span><span class="n">repository</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">userlogin</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Analyse a specific repository.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Log in to GitHub</span>
+    <span class="k">global</span> <span class="n">github_login</span>
+    <span class="n">github_login</span> <span class="o">=</span> <span class="n">Github</span><span class="p">(</span><span class="n">userlogin</span><span class="p">,</span> <span class="n">password</span><span class="p">)</span>
+    <span class="n">repository_object</span> <span class="o">=</span> <span class="n">github_login</span><span class="o">.</span><span class="n">get_user</span><span class="p">(</span><span class="n">username</span><span class="p">)</span><span class="o">.</span><span class="n">get_repo</span><span class="p">(</span><span class="n">repository</span><span class="p">)</span>
+
+    <span class="n">repo_analysis</span><span class="p">(</span><span class="n">repository</span><span class="o">=</span><span class="n">repository_object</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+
+    <span class="n">fork_analysis</span><span class="p">(</span><span class="n">repository</span><span class="o">=</span><span class="n">repository_object</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+
+    <span class="n">pull_requests_analysis</span><span class="p">(</span><span class="n">repository</span><span class="o">=</span><span class="n">repository_object</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+
+    <span class="n">clean_graph</span><span class="p">(</span><span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">graph</span></div>
+
+
+<div class="viewcode-block" id="fork_analysis"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.github_analysis.fork_analysis">[docs]</a><span class="k">def</span> <span class="nf">fork_analysis</span><span class="p">(</span><span class="n">repository</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Analyse the forks of a repository.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Global variable</span>
+    <span class="k">global</span> <span class="n">edge_key</span>
+
+    <span class="c1"># Local graph variable</span>
+    <span class="n">local_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">repository</span><span class="o">.</span><span class="n">get_forks</span><span class="p">()):</span>
+        <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">owner</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">repository</span><span class="o">.</span><span class="n">owner</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># Add edge from the forker to the owner</span>
+            <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">owner</span><span class="o">.</span><span class="n">login</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                <span class="n">get_users</span><span class="p">(</span>
+                    <span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">owner</span><span class="o">.</span><span class="n">login</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;forker&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+                <span class="n">get_users</span><span class="p">(</span>
+                    <span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">owner</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                    <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;forker&quot;</span><span class="p">,</span>
+                    <span class="n">graph</span><span class="o">=</span><span class="n">local_graph</span><span class="p">)</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                <span class="n">i</span><span class="o">.</span><span class="n">owner</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                <span class="n">repository</span><span class="o">.</span><span class="n">owner</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+                <span class="n">node</span><span class="o">=</span><span class="n">f</span><span class="p">,</span>
+                <span class="n">msg</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">full_name</span><span class="p">,</span>
+                <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;fork&quot;</span><span class="p">,</span>
+                <span class="n">start</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">created_at</span><span class="p">,</span>
+                <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+            <span class="n">local_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                <span class="n">i</span><span class="o">.</span><span class="n">owner</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                <span class="n">repository</span><span class="o">.</span><span class="n">owner</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+                <span class="n">node</span><span class="o">=</span><span class="n">f</span><span class="p">,</span>
+                <span class="n">msg</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">full_name</span><span class="p">,</span>
+                <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;fork&quot;</span><span class="p">,</span>
+                <span class="n">start</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">created_at</span><span class="p">,</span>
+                <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">local_graph</span></div>
+
+
+<div class="viewcode-block" id="pull_requests_analysis"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.github_analysis.pull_requests_analysis">[docs]</a><span class="k">def</span> <span class="nf">pull_requests_analysis</span><span class="p">(</span><span class="n">repository</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Analyse the discussion of pull requests of a repository.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Global variable</span>
+    <span class="k">global</span> <span class="n">edge_key</span>
+
+    <span class="c1"># Local graph variable</span>
+    <span class="n">local_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">()</span>
+
+    <span class="c1"># Check both open and closed pull requests</span>
+    <span class="c1"># Open pull requests are not merged</span>
+    <span class="n">pull_request_states</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;closed&quot;</span><span class="p">,</span> <span class="s2">&quot;open&quot;</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">pull_request_states</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">f</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">repository</span><span class="o">.</span><span class="n">get_pulls</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="n">state</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">is_merged</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="c1"># if state == &quot;closed&quot;:</span>
+                <span class="c1"># Add edge from who merged the pull request to who did it</span>
+                <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">merged_by</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">i</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">merged_by</span><span class="o">.</span><span class="n">login</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                        <span class="n">get_users</span><span class="p">(</span>
+                            <span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">merged_by</span><span class="p">,</span>
+                            <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;forker&quot;</span><span class="p">,</span>
+                            <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+                        <span class="n">get_users</span><span class="p">(</span>
+                            <span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">merged_by</span><span class="p">,</span>
+                            <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;forker&quot;</span><span class="p">,</span>
+                            <span class="n">graph</span><span class="o">=</span><span class="n">local_graph</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">login</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                        <span class="n">get_users</span><span class="p">(</span>
+                            <span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;forker&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+                        <span class="n">get_users</span><span class="p">(</span>
+                            <span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">user</span><span class="p">,</span>
+                            <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;forker&quot;</span><span class="p">,</span>
+                            <span class="n">graph</span><span class="o">=</span><span class="n">local_graph</span><span class="p">)</span>
+                    <span class="n">graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                        <span class="n">i</span><span class="o">.</span><span class="n">merged_by</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                        <span class="n">i</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                        <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+                        <span class="n">node</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">merge_commit_sha</span><span class="p">,</span>
+                        <span class="n">msg</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;merged pull request&quot;</span><span class="p">,</span>
+                        <span class="n">start</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">merged_at</span><span class="p">,</span>
+                        <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+                    <span class="n">local_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                        <span class="n">i</span><span class="o">.</span><span class="n">merged_by</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                        <span class="n">i</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                        <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+                        <span class="n">node</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">merge_commit_sha</span><span class="p">,</span>
+                        <span class="n">msg</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;merged pull request&quot;</span><span class="p">,</span>
+                        <span class="n">start</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">merged_at</span><span class="p">,</span>
+                        <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+
+            <span class="c1"># Add edge from who did the pull requests to the repo owner</span>
+            <span class="k">if</span> <span class="n">repository</span><span class="o">.</span><span class="n">owner</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">i</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">repository</span><span class="o">.</span><span class="n">owner</span><span class="o">.</span><span class="n">login</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                    <span class="n">get_users</span><span class="p">(</span>
+                        <span class="n">element</span><span class="o">=</span><span class="n">repository</span><span class="o">.</span><span class="n">owner</span><span class="p">,</span>
+                        <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;created a pull request&quot;</span><span class="p">,</span>
+                        <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+                    <span class="n">get_users</span><span class="p">(</span>
+                        <span class="n">element</span><span class="o">=</span><span class="n">repository</span><span class="o">.</span><span class="n">owner</span><span class="p">,</span>
+                        <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;created a pull request&quot;</span><span class="p">,</span>
+                        <span class="n">graph</span><span class="o">=</span><span class="n">local_graph</span><span class="p">)</span>
+                <span class="n">graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                    <span class="n">i</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                    <span class="n">repository</span><span class="o">.</span><span class="n">owner</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                    <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+                    <span class="n">node</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                    <span class="n">msg</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+                    <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;merged pull request&quot;</span><span class="p">,</span>
+                    <span class="n">start</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">created_at</span><span class="p">,</span>
+                    <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+                <span class="n">local_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                    <span class="n">i</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                    <span class="n">repository</span><span class="o">.</span><span class="n">owner</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                    <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+                    <span class="n">node</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                    <span class="n">msg</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+                    <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;created a pull request&quot;</span><span class="p">,</span>
+                    <span class="n">start</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">created_at</span><span class="p">,</span>
+                    <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+
+            <span class="c1"># Add edge from owner to assignee</span>
+            <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">assignee</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">assignee</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">():</span>
+                    <span class="n">get_users</span><span class="p">(</span>
+                        <span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">assignee</span><span class="p">,</span>
+                        <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;pull request assignee&quot;</span><span class="p">,</span>
+                        <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+                    <span class="n">get_users</span><span class="p">(</span>
+                        <span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">assignee</span><span class="p">,</span>
+                        <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;pull request assignee&quot;</span><span class="p">,</span>
+                        <span class="n">graph</span><span class="o">=</span><span class="n">local_graph</span><span class="p">)</span>
+                <span class="n">graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                    <span class="n">repository</span><span class="o">.</span><span class="n">owner</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                    <span class="n">i</span><span class="o">.</span><span class="n">assignee</span><span class="p">,</span>
+                    <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+                    <span class="n">node</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                    <span class="n">msg</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+                    <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;pull request assignee&quot;</span><span class="p">,</span>
+                    <span class="n">start</span><span class="o">=</span><span class="n">i</span><span class="o">.</span><span class="n">created_at</span><span class="p">,</span>
+                    <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+
+            <span class="c1"># Comments</span>
+            <span class="c1"># for j in i.get_comments():</span>
+            <span class="c1">#     print j</span>
+            <span class="c1"># for j in i.get_review_comments():</span>
+            <span class="c1">#     print j</span>
+            <span class="c1"># for j in i.get_issue_comments():</span>
+            <span class="c1">#     print j</span>
+
+            <span class="c1"># Check the comments in the pull request</span>
+            <span class="n">pull_request_comments</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">i</span><span class="o">.</span><span class="n">get_comments</span><span class="p">():</span>
+                <span class="n">comment</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;@node&#39;</span><span class="p">:</span> <span class="n">j</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                           <span class="s1">&#39;date&#39;</span><span class="p">:</span> <span class="n">j</span><span class="o">.</span><span class="n">created_at</span><span class="p">,</span>
+                           <span class="s1">&#39;msg&#39;</span><span class="p">:</span> <span class="n">j</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+                           <span class="s1">&#39;author&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;#text&#39;</span><span class="p">:</span> <span class="n">j</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                                      <span class="s1">&#39;@email&#39;</span><span class="p">:</span> <span class="n">j</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p">,</span>
+                                      <span class="s1">&#39;avatar_url&#39;</span><span class="p">:</span> <span class="n">j</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">avatar_url</span><span class="p">}}</span>
+                <span class="n">get_users</span><span class="p">(</span>
+                    <span class="n">element</span><span class="o">=</span><span class="n">j</span><span class="o">.</span><span class="n">user</span><span class="p">,</span>
+                    <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;pull request commenter&quot;</span><span class="p">,</span>
+                    <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+                <span class="n">pull_request_comments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">comment</span><span class="p">)</span>
+
+            <span class="n">comments_analysis</span><span class="p">(</span>
+                <span class="n">pull_request_comments</span><span class="p">,</span>
+                <span class="n">graph</span><span class="p">,</span>
+                <span class="n">comment_type</span><span class="o">=</span><span class="s2">&quot;pull request comment&quot;</span><span class="p">)</span>
+            <span class="n">comments_analysis</span><span class="p">(</span>
+                <span class="n">pull_request_comments</span><span class="p">,</span>
+                <span class="n">local_graph</span><span class="p">,</span>
+                <span class="n">comment_type</span><span class="o">=</span><span class="s2">&quot;pull request comment&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">local_graph</span></div>
+
+
+<div class="viewcode-block" id="issue_analysis"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.github_analysis.issue_analysis">[docs]</a><span class="k">def</span> <span class="nf">issue_analysis</span><span class="p">(</span><span class="n">issue</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Analyse the discussion of a single issue.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Global variable</span>
+    <span class="k">global</span> <span class="n">edge_key</span>
+
+    <span class="c1"># Local graph variable</span>
+    <span class="n">local_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">()</span>
+
+    <span class="k">if</span> <span class="n">issue</span><span class="o">.</span><span class="n">user</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Issue creator</span>
+        <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">issue</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;issue creator&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+
+    <span class="c1"># Issue assignee</span>
+    <span class="k">if</span> <span class="n">issue</span><span class="o">.</span><span class="n">assignee</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">edge_key</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">get_users</span><span class="p">(</span>
+            <span class="n">element</span><span class="o">=</span><span class="n">issue</span><span class="o">.</span><span class="n">assignee</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;issue assignee&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+        <span class="n">graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+            <span class="n">issue</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+            <span class="n">issue</span><span class="o">.</span><span class="n">assignee</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+            <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+            <span class="n">node</span><span class="o">=</span><span class="n">issue</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="n">msg</span><span class="o">=</span><span class="n">issue</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+            <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;issue assignation&quot;</span><span class="p">,</span>
+            <span class="n">start</span><span class="o">=</span><span class="n">issue</span><span class="o">.</span><span class="n">created_at</span><span class="p">,</span>
+            <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+        <span class="n">local_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+            <span class="n">issue</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+            <span class="n">issue</span><span class="o">.</span><span class="n">assignee</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+            <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+            <span class="n">node</span><span class="o">=</span><span class="n">issue</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+            <span class="n">msg</span><span class="o">=</span><span class="n">issue</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+            <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;issue assignation&quot;</span><span class="p">,</span>
+            <span class="n">start</span><span class="o">=</span><span class="n">issue</span><span class="o">.</span><span class="n">created_at</span><span class="p">,</span>
+            <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+
+    <span class="c1"># Check the comments in the issue</span>
+    <span class="n">issues_comments</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">first_issue_comment</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s1">&#39;@node&#39;</span><span class="p">:</span> <span class="n">issue</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+        <span class="s1">&#39;date&#39;</span><span class="p">:</span> <span class="n">issue</span><span class="o">.</span><span class="n">created_at</span><span class="p">,</span>
+        <span class="s1">&#39;msg&#39;</span><span class="p">:</span> <span class="n">issue</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>  <span class="c1"># Use f.body for the comment content</span>
+        <span class="s1">&#39;author&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;#text&#39;</span><span class="p">:</span> <span class="n">issue</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                   <span class="s1">&#39;@email&#39;</span><span class="p">:</span> <span class="n">issue</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p">,</span>
+                   <span class="s1">&#39;avatar_url&#39;</span><span class="p">:</span> <span class="n">issue</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">avatar_url</span><span class="p">}}</span>
+    <span class="n">issues_comments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">first_issue_comment</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">issue</span><span class="o">.</span><span class="n">get_comments</span><span class="p">()):</span>
+        <span class="n">comment</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;@node&#39;</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">id</span><span class="p">,</span>
+                   <span class="s1">&#39;date&#39;</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">created_at</span><span class="p">,</span>
+                   <span class="s1">&#39;msg&#39;</span><span class="p">:</span> <span class="n">issue</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>  <span class="c1"># Use f.body for the comment content</span>
+                   <span class="s1">&#39;author&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;#text&#39;</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                              <span class="s1">&#39;@email&#39;</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p">,</span>
+                              <span class="s1">&#39;avatar_url&#39;</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">avatar_url</span><span class="p">}}</span>
+        <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">f</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;issue commenter&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+        <span class="n">issues_comments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">comment</span><span class="p">)</span>
+
+    <span class="n">comments_analysis</span><span class="p">(</span>
+        <span class="n">issues_comments</span><span class="p">,</span>
+        <span class="n">graph</span><span class="p">,</span>
+        <span class="n">comment_type</span><span class="o">=</span><span class="s2">&quot;issue comment&quot;</span><span class="p">)</span>
+    <span class="n">comments_analysis</span><span class="p">(</span>
+        <span class="n">issues_comments</span><span class="p">,</span>
+        <span class="n">local_graph</span><span class="p">,</span>
+        <span class="n">comment_type</span><span class="o">=</span><span class="s2">&quot;issue comment&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">local_graph</span></div>
+
+
+<div class="viewcode-block" id="comments_analysis"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.github_analysis.comments_analysis">[docs]</a><span class="k">def</span> <span class="nf">comments_analysis</span><span class="p">(</span><span class="n">discussion</span><span class="p">,</span> <span class="n">graph</span><span class="p">,</span> <span class="n">comment_type</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Analyse the discussion of a GitHub discussion.</span>
+<span class="sd">    Add edges to the graph and return a graph of the specified discussion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Global variable</span>
+    <span class="k">global</span> <span class="n">edge_key</span>
+
+    <span class="c1"># Local graph variable</span>
+    <span class="n">local_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">()</span>
+
+    <span class="c1"># Check all the comments in the commit</span>
+    <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="n">f</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">discussion</span><span class="p">):</span>
+        <span class="c1"># Add an edge to all the previous participants in the discussion</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">discussion</span><span class="p">[:</span><span class="n">j</span><span class="p">]:</span>
+            <span class="n">edge_key</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                <span class="n">f</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;#text&quot;</span><span class="p">],</span> <span class="n">k</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;#text&quot;</span><span class="p">],</span> <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+                <span class="n">node</span><span class="o">=</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;@node&quot;</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="n">comment_type</span><span class="p">,</span> <span class="n">msg</span><span class="o">=</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;msg&quot;</span><span class="p">],</span>
+                <span class="n">start</span><span class="o">=</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">],</span> <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+            <span class="n">local_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                <span class="n">f</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;#text&quot;</span><span class="p">],</span> <span class="n">k</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;#text&quot;</span><span class="p">],</span> <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+                <span class="nb">type</span><span class="o">=</span><span class="n">comment_type</span><span class="p">,</span> <span class="n">node</span><span class="o">=</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;@node&quot;</span><span class="p">],</span> <span class="n">date</span><span class="o">=</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">],</span>
+                <span class="n">msg</span><span class="o">=</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;msg&quot;</span><span class="p">],</span> <span class="n">start</span><span class="o">=</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">],</span>
+                <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+
+            <span class="c1"># Check if there are any username mentions in the body of each</span>
+            <span class="c1"># comment, and add an edge if there are any</span>
+            <span class="n">message_body</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="s2">&quot;msg&quot;</span><span class="p">]</span>
+            <span class="n">message_body_split</span> <span class="o">=</span> <span class="n">message_body</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="n">message_body_split</span><span class="p">:</span>
+                <span class="c1"># If the word is an username...</span>
+                <span class="k">if</span> <span class="s2">&quot;@&quot;</span> <span class="ow">in</span> <span class="n">word</span><span class="p">:</span>
+                    <span class="c1"># Check that it is a username and not an e-mail address</span>
+                    <span class="n">email_check</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">findall</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;[\w\.-]+@[\w\.-]+&#39;</span><span class="p">,</span> <span class="n">word</span><span class="p">)</span>
+                    <span class="c1"># If it is not an e-mail address but an username, add an</span>
+                    <span class="c1"># edge</span>
+                    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">email_check</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                        <span class="c1"># Remove the @ mention char</span>
+                        <span class="n">word</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;@&#39;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">word</span><span class="p">)</span>
+                        <span class="c1"># If the username is a word longer than 0 chars, then</span>
+                        <span class="c1"># create an edge from the issue comment author to the</span>
+                        <span class="c1"># mentioned username</span>
+                        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">word</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="c1"># Remove strange punctuation at the end, if any</span>
+                            <span class="k">if</span> <span class="n">word</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="n">string</span><span class="o">.</span><span class="n">punctuation</span><span class="p">:</span>
+                                <span class="n">word</span> <span class="o">=</span> <span class="n">word</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                                <span class="n">edge_key</span> <span class="o">+=</span> <span class="mi">1</span>
+                                <span class="n">graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                                    <span class="n">f</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;#text&quot;</span><span class="p">],</span> <span class="n">word</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+                                    <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;comment mention&quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">],</span>
+                                    <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+                                <span class="n">local_graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                                    <span class="n">f</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;#text&quot;</span><span class="p">],</span> <span class="n">word</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+                                    <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;comment mention&quot;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="n">f</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">],</span>
+                                    <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">local_graph</span></div>
+
+
+<div class="viewcode-block" id="get_users"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.github_analysis.get_users">[docs]</a><span class="k">def</span> <span class="nf">get_users</span><span class="p">(</span><span class="n">element</span><span class="p">,</span> <span class="n">user_type</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get users of a specific type from the GitHub repo.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">element</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">element</span><span class="o">.</span><span class="n">login</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">:</span>
+                <span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">element</span><span class="o">.</span><span class="n">login</span><span class="p">))</span>
+                <span class="c1"># graph.node[str(element.login)][&quot;Label&quot;] = str(element.login)</span>
+                <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">element</span><span class="o">.</span><span class="n">login</span><span class="p">)][</span><span class="n">user_type</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Yes&quot;</span>
+                <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">element</span><span class="o">.</span><span class="n">login</span><span class="p">)][</span><span class="s2">&quot;email&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">check_none</span><span class="p">(</span><span class="n">element</span><span class="o">.</span><span class="n">email</span><span class="p">)</span>
+                <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">element</span><span class="o">.</span><span class="n">login</span><span class="p">)][</span><span class="s2">&quot;avatar_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">check_none</span><span class="p">(</span>
+                    <span class="n">element</span><span class="o">.</span><span class="n">avatar_url</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">element</span><span class="o">.</span><span class="n">login</span><span class="p">)][</span><span class="n">user_type</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Yes&quot;</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">new_element</span> <span class="o">=</span> <span class="n">github_login</span><span class="o">.</span><span class="n">get_user</span><span class="p">(</span><span class="n">element</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">new_element</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">new_element</span><span class="o">.</span><span class="n">login</span><span class="p">)</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">:</span>
+                    <span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">new_element</span><span class="o">.</span><span class="n">login</span><span class="p">))</span>
+                    <span class="c1"># graph.node[str(new_element.login)][&quot;Label&quot;] = check_none(new_element.login)</span>
+                    <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">new_element</span><span class="o">.</span><span class="n">login</span><span class="p">)][</span><span class="n">user_type</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Yes&quot;</span>
+                    <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">new_element</span><span class="o">.</span><span class="n">login</span><span class="p">)][</span><span class="s2">&quot;email&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">check_none</span><span class="p">(</span><span class="n">new_element</span><span class="o">.</span><span class="n">email</span><span class="p">)</span>
+                    <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">new_element</span><span class="o">.</span><span class="n">login</span><span class="p">)][</span><span class="s2">&quot;avatar_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">check_none</span><span class="p">(</span><span class="n">new_element</span><span class="o">.</span><span class="n">avatar_url</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">new_element</span><span class="o">.</span><span class="n">login</span><span class="p">)][</span><span class="n">user_type</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Yes&quot;</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;There was an error with&quot;</span><span class="p">,</span> <span class="n">element</span><span class="p">,</span> <span class="s2">&quot;which is of type&quot;</span><span class="p">,</span>
+                  <span class="nb">type</span><span class="p">(</span><span class="n">element</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="repo_analysis"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.github_analysis.repo_analysis">[docs]</a><span class="k">def</span> <span class="nf">repo_analysis</span><span class="p">(</span><span class="n">repository</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Analyse a specific GitHub repo.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Global variable</span>
+    <span class="k">global</span> <span class="n">edge_key</span>
+
+    <span class="c1"># Local graph variable</span>
+    <span class="n">local_graph</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">MultiDiGraph</span><span class="p">()</span>
+
+    <span class="c1"># Add the repo owner to the graph</span>
+    <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">repository</span><span class="o">.</span><span class="n">owner</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;owner&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+    <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">repository</span><span class="o">.</span><span class="n">owner</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;owner&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">local_graph</span><span class="p">)</span>
+
+    <span class="c1"># Add an edge from the owner to the repo, to mark the creation of the repo</span>
+    <span class="n">graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+        <span class="n">repository</span><span class="o">.</span><span class="n">owner</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+        <span class="n">repository</span><span class="o">.</span><span class="n">full_name</span><span class="p">,</span>
+        <span class="n">key</span><span class="o">=</span><span class="n">edge_key</span><span class="p">,</span>
+        <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;repository creation&quot;</span><span class="p">,</span>
+        <span class="n">start</span><span class="o">=</span><span class="n">repository</span><span class="o">.</span><span class="n">created_at</span><span class="p">,</span>
+        <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+    <span class="n">edge_key</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="c1"># Add the repo watchers to the graph</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">repository</span><span class="o">.</span><span class="n">get_stargazers</span><span class="p">():</span>
+        <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;stargazer&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+        <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;stargazer&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">local_graph</span><span class="p">)</span>
+
+    <span class="c1"># Add the repo collaborators to the graph</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">repository</span><span class="o">.</span><span class="n">get_collaborators</span><span class="p">():</span>
+        <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;collaborator&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+        <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;collaborator&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">local_graph</span><span class="p">)</span>
+
+    <span class="c1"># Add the repo contributors to the graph</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">repository</span><span class="o">.</span><span class="n">get_contributors</span><span class="p">():</span>
+        <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;contributor&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+        <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;contributor&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">local_graph</span><span class="p">)</span>
+
+    <span class="c1"># Add the repo watchers to the graph</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">repository</span><span class="o">.</span><span class="n">get_watchers</span><span class="p">():</span>
+        <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;watcher&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+        <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;watcher&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">local_graph</span><span class="p">)</span>
+
+    <span class="c1"># Add the repo subscribers to the graph</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">repository</span><span class="o">.</span><span class="n">get_subscribers</span><span class="p">():</span>
+        <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;subscriber&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+        <span class="n">get_users</span><span class="p">(</span><span class="n">element</span><span class="o">=</span><span class="n">i</span><span class="p">,</span> <span class="n">user_type</span><span class="o">=</span><span class="s2">&quot;subscriber&quot;</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">local_graph</span><span class="p">)</span>
+
+    <span class="c1"># Analyse issues of the repo</span>
+    <span class="k">if</span> <span class="n">repository</span><span class="o">.</span><span class="n">has_issues</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">repository</span><span class="o">.</span><span class="n">get_issues</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="s2">&quot;open&quot;</span><span class="p">):</span>
+            <span class="n">issue_analysis</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">graph</span><span class="p">)</span>
+            <span class="n">issue_analysis</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">local_graph</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">repository</span><span class="o">.</span><span class="n">get_issues</span><span class="p">(</span><span class="n">state</span><span class="o">=</span><span class="s2">&quot;closed&quot;</span><span class="p">):</span>
+            <span class="n">issue_analysis</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">graph</span><span class="p">)</span>
+            <span class="n">issue_analysis</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">local_graph</span><span class="p">)</span>
+
+    <span class="c1"># Analyse the commits of the repo</span>
+
+    <span class="c1"># Get the log from GitHub, we want the GitHub username</span>
+    <span class="n">github_commits</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">repository</span><span class="o">.</span><span class="n">get_commits</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">commit</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;@node&quot;</span><span class="p">:</span> <span class="n">check_none</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">sha</span><span class="p">),</span>
+                <span class="s2">&quot;date&quot;</span><span class="p">:</span> <span class="n">check_none</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">commit</span><span class="o">.</span><span class="n">author</span><span class="o">.</span><span class="n">date</span><span class="p">),</span>
+                <span class="s2">&quot;msg&quot;</span><span class="p">:</span> <span class="n">check_none</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">commit</span><span class="o">.</span><span class="n">message</span><span class="p">),</span>
+                <span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;#text&quot;</span><span class="p">:</span> <span class="n">check_none</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">author</span><span class="o">.</span><span class="n">login</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">author</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s1">&#39;None&#39;</span><span class="p">,</span>
+                    <span class="s2">&quot;@email&quot;</span><span class="p">:</span> <span class="n">check_none</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">author</span><span class="o">.</span><span class="n">email</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">author</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s1">&#39;None&#39;</span><span class="p">,</span>
+                    <span class="s2">&quot;avatar_url&quot;</span><span class="p">:</span> <span class="n">check_none</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">author</span><span class="o">.</span><span class="n">avatar_url</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">author</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s1">&#39;None&#39;</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;committer&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;#text&quot;</span><span class="p">:</span> <span class="n">check_none</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">committer</span><span class="o">.</span><span class="n">login</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">committer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s1">&#39;None&#39;</span><span class="p">,</span>
+                    <span class="s2">&quot;@email&quot;</span><span class="p">:</span> <span class="n">check_none</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">committer</span><span class="o">.</span><span class="n">email</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">committer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s1">&#39;None&#39;</span><span class="p">,</span>
+                    <span class="s2">&quot;avatar_url&quot;</span><span class="p">:</span> <span class="n">check_none</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">committer</span><span class="o">.</span><span class="n">avatar_url</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">i</span><span class="o">.</span><span class="n">committer</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s1">&#39;None&#39;</span>
+                <span class="p">},</span>
+            <span class="p">}</span>
+        <span class="n">github_commits</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">commit</span><span class="p">)</span>
+
+    <span class="c1"># Unfortunately, it&#39;s hard to understand the work on files from GitHub</span>
+    <span class="c1"># And sometimes the same person uses different names on GitHub and git.</span>
+    <span class="c1"># So we merge the GitHub log with the git log.</span>
+
+    <span class="c1"># Get the files log from cloning the repo</span>
+    <span class="n">git_commits</span> <span class="o">=</span> <span class="n">git</span><span class="o">.</span><span class="n">git_remote_repo_log</span><span class="p">(</span>
+        <span class="n">repository</span><span class="o">.</span><span class="n">clone_url</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">log_type</span><span class="o">=</span><span class="s2">&quot;files&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Add GitHub user details from the GitHub log to the git log of files</span>
+    <span class="c1"># By checking the commit sha</span>
+    <span class="n">github_files_log</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">each_git_file</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">git_commits</span><span class="p">):</span>
+        <span class="c1"># Collect the log of the files from git</span>
+        <span class="n">github_files_log</span><span class="p">[</span><span class="n">each_git_file</span><span class="p">]</span> <span class="o">=</span> <span class="n">git_commits</span><span class="p">[</span><span class="n">each_git_file</span><span class="p">]</span>
+
+    <span class="c1"># Check with the log from GitHub, and add username details from it</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">github_files_log</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">github_files_log</span><span class="p">[</span><span class="n">k</span><span class="p">]):</span>
+            <span class="n">current_sha</span> <span class="o">=</span> <span class="n">github_files_log</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">l</span><span class="p">][</span><span class="s2">&quot;@node&quot;</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">github_commits</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">g</span><span class="p">[</span><span class="s2">&quot;@node&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">current_sha</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">g</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;#text&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;None&quot;</span><span class="p">:</span>
+                        <span class="n">github_files_log</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">l</span><span class="p">][</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;#text&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span>
+                            <span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;#text&quot;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">g</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;@email&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;None&quot;</span><span class="p">:</span>
+                        <span class="n">github_files_log</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">l</span><span class="p">][</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;@email&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span>
+                            <span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;@email&quot;</span><span class="p">]</span>
+                    <span class="k">if</span> <span class="n">g</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;avatar_url&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;None&quot;</span><span class="p">:</span>
+                        <span class="n">github_files_log</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">l</span><span class="p">][</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;avatar_url&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span>
+                            <span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;avatar_url&quot;</span><span class="p">]</span>
+                    <span class="n">github_files_log</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="n">l</span><span class="p">][</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;committer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Yes&quot;</span>
+
+    <span class="c1"># Update the main graph from the git + GitHub log</span>
+    <span class="n">git</span><span class="o">.</span><span class="n">git_repo_analysis</span><span class="p">(</span><span class="n">github_files_log</span><span class="p">,</span> <span class="n">graph</span><span class="p">)</span>
+    <span class="n">git</span><span class="o">.</span><span class="n">git_repo_analysis</span><span class="p">(</span><span class="n">github_files_log</span><span class="p">,</span> <span class="n">local_graph</span><span class="p">)</span>
+
+    <span class="c1"># Get interactions from comments in commits on GitHub</span>
+    <span class="n">github_commits_comments</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">github_commits_comments_ordered</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">repository</span><span class="o">.</span><span class="n">get_comments</span><span class="p">():</span>
+        <span class="n">comment</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;@node&#39;</span><span class="p">:</span> <span class="n">i</span><span class="o">.</span><span class="n">commit_id</span><span class="p">,</span>
+                   <span class="s1">&#39;date&#39;</span><span class="p">:</span> <span class="n">i</span><span class="o">.</span><span class="n">created_at</span><span class="p">,</span>
+                   <span class="s1">&#39;msg&#39;</span><span class="p">:</span> <span class="n">i</span><span class="o">.</span><span class="n">body</span><span class="p">,</span>
+                   <span class="s1">&#39;author&#39;</span><span class="p">:</span> <span class="p">{</span><span class="s1">&#39;#text&#39;</span><span class="p">:</span> <span class="n">i</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">login</span><span class="p">,</span>
+                              <span class="s1">&#39;@email&#39;</span><span class="p">:</span> <span class="n">i</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p">,</span>
+                              <span class="s1">&#39;avatar_url&#39;</span><span class="p">:</span> <span class="n">i</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">avatar_url</span><span class="p">}}</span>
+        <span class="n">github_commits_comments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">comment</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">github_commits_comments</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">i</span><span class="p">[</span><span class="s1">&#39;@node&#39;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">github_commits_comments_ordered</span><span class="p">:</span>
+            <span class="n">github_commits_comments_ordered</span><span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;@node&#39;</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="c1"># Add the commit to the comments, it is part of the discussion</span>
+            <span class="n">commit_index</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">index</span>
+                                 <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">github_commits</span><span class="p">)</span>
+                                 <span class="k">if</span> <span class="n">d</span><span class="p">[</span><span class="s1">&#39;@node&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">i</span><span class="p">[</span><span class="s1">&#39;@node&#39;</span><span class="p">]))</span>
+            <span class="n">github_commits_comments_ordered</span><span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;@node&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">github_commits</span><span class="p">[</span>
+                <span class="n">commit_index</span><span class="p">])</span>
+            <span class="n">github_commits_comments_ordered</span><span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;@node&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">github_commits_comments_ordered</span><span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="s1">&#39;@node&#39;</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+    <span class="c1"># Analyse each commit and its comments</span>
+    <span class="k">for</span> <span class="n">each_commit</span> <span class="ow">in</span> <span class="n">github_commits_comments_ordered</span><span class="p">:</span>
+        <span class="n">comments_analysis</span><span class="p">(</span>
+            <span class="n">github_commits_comments_ordered</span><span class="p">[</span><span class="n">each_commit</span><span class="p">],</span>
+            <span class="n">graph</span><span class="p">,</span>
+            <span class="n">comment_type</span><span class="o">=</span><span class="s2">&quot;commit comment&quot;</span><span class="p">)</span>
+        <span class="n">comments_analysis</span><span class="p">(</span>
+            <span class="n">github_commits_comments_ordered</span><span class="p">[</span><span class="n">each_commit</span><span class="p">],</span>
+            <span class="n">local_graph</span><span class="p">,</span>
+            <span class="n">comment_type</span><span class="o">=</span><span class="s2">&quot;commit comment&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">local_graph</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="k">pass</span>
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Massimo Menichinelli.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'0.2',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>

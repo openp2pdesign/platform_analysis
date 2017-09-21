@@ -6,9 +6,16 @@
 Welcome to platform_analysis's documentation!
 =============================================
 
+A Python library for Social Network Analysis of online collaboration platforms and tools like Twitter, YouTube and Git, Hg, SVN, GitHub, GitLab, BitBucket repositories.
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+
+   install
+   intro
+   tutorial
+   credits
 
 
 

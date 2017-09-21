@@ -88,21 +88,11 @@
               
             
             
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">platform_analysis package</a><ul>
-<li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#platform-analysis-git-module">platform_analysis.git module</a></li>
-<li><a class="reference internal" href="#platform-analysis-github-analysis-module">platform_analysis.github_analysis module</a></li>
-<li><a class="reference internal" href="#platform-analysis-hg-module">platform_analysis.hg module</a></li>
-<li><a class="reference internal" href="#platform-analysis-sna-module">platform_analysis.sna module</a></li>
-<li><a class="reference internal" href="#platform-analysis-svn-module">platform_analysis.svn module</a></li>
-<li><a class="reference internal" href="#platform-analysis-utils-module">platform_analysis.utils module</a></li>
-<li><a class="reference internal" href="#module-contents">Module contents</a></li>
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
 </ul>
-</li>
-</ul>
-</div>
+
             
           
         </div>
@@ -169,26 +159,175 @@
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="platform-analysis-git-module">
-<h2>platform_analysis.git module<a class="headerlink" href="#platform-analysis-git-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-platform_analysis.git">
+<span id="platform-analysis-git-module"></span><h2>platform_analysis.git module<a class="headerlink" href="#module-platform_analysis.git" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="platform_analysis.git.convert_log_to_dict">
+<code class="descclassname">platform_analysis.git.</code><code class="descname">convert_log_to_dict</code><span class="sig-paren">(</span><em>input_text</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/git.html#convert_log_to_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.git.convert_log_to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the git log output to json.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.git.get_commits_log">
+<code class="descclassname">platform_analysis.git.</code><code class="descname">get_commits_log</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/git.html#get_commits_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.git.get_commits_log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the history of the commits of a git repository into a dict.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.git.get_files_log">
+<code class="descclassname">platform_analysis.git.</code><code class="descname">get_files_log</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/git.html#get_files_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.git.get_files_log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the history of each edited file in a git repository into a dict.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.git.git_local_repo_analysis">
+<code class="descclassname">platform_analysis.git.</code><code class="descname">git_local_repo_analysis</code><span class="sig-paren">(</span><em>path</em>, <em>graph</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/git.html#git_local_repo_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.git.git_local_repo_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Analyse a local git repository.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.git.git_remote_repo_analysis">
+<code class="descclassname">platform_analysis.git.</code><code class="descname">git_remote_repo_analysis</code><span class="sig-paren">(</span><em>url</em>, <em>path</em>, <em>graph</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/git.html#git_remote_repo_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.git.git_remote_repo_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clone, analyse (and then remove the local copy) a remote git repository.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.git.git_remote_repo_log">
+<code class="descclassname">platform_analysis.git.</code><code class="descname">git_remote_repo_log</code><span class="sig-paren">(</span><em>url</em>, <em>path</em>, <em>log_type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/git.html#git_remote_repo_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.git.git_remote_repo_log" title="Permalink to this definition">¶</a></dt>
+<dd><p>Clone, retrieve the log of (and then remove the local copy) a remote git repository.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.git.git_repo_analysis">
+<code class="descclassname">platform_analysis.git.</code><code class="descname">git_repo_analysis</code><span class="sig-paren">(</span><em>git_files_log</em>, <em>graph</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/git.html#git_repo_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.git.git_repo_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>The main function of SNA for a git repo.</p>
+</dd></dl>
+
 </div>
-<div class="section" id="platform-analysis-github-analysis-module">
-<h2>platform_analysis.github_analysis module<a class="headerlink" href="#platform-analysis-github-analysis-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-platform_analysis.github_analysis">
+<span id="platform-analysis-github-analysis-module"></span><h2>platform_analysis.github_analysis module<a class="headerlink" href="#module-platform_analysis.github_analysis" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="platform_analysis.github_analysis.check_none">
+<code class="descclassname">platform_analysis.github_analysis.</code><code class="descname">check_none</code><span class="sig-paren">(</span><em>value_to_check</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/github_analysis.html#check_none"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.github_analysis.check_none" title="Permalink to this definition">¶</a></dt>
+<dd><p>Helper function that checks for None values from the GitHub APIs.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.github_analysis.clean_graph">
+<code class="descclassname">platform_analysis.github_analysis.</code><code class="descname">clean_graph</code><span class="sig-paren">(</span><em>graph</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/github_analysis.html#clean_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.github_analysis.clean_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check the missing attributes of every node, and add a “No” when it is not
+present. With this you can, for example, use the attribute for graph
+partitioning in Gephi</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.github_analysis.comments_analysis">
+<code class="descclassname">platform_analysis.github_analysis.</code><code class="descname">comments_analysis</code><span class="sig-paren">(</span><em>discussion</em>, <em>graph</em>, <em>comment_type</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/github_analysis.html#comments_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.github_analysis.comments_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Analyse the discussion of a GitHub discussion.
+Add edges to the graph and return a graph of the specified discussion.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.github_analysis.fork_analysis">
+<code class="descclassname">platform_analysis.github_analysis.</code><code class="descname">fork_analysis</code><span class="sig-paren">(</span><em>repository</em>, <em>graph</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/github_analysis.html#fork_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.github_analysis.fork_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Analyse the forks of a repository.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.github_analysis.get_users">
+<code class="descclassname">platform_analysis.github_analysis.</code><code class="descname">get_users</code><span class="sig-paren">(</span><em>element</em>, <em>user_type</em>, <em>graph</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/github_analysis.html#get_users"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.github_analysis.get_users" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get users of a specific type from the GitHub repo.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.github_analysis.github_analysis">
+<code class="descclassname">platform_analysis.github_analysis.</code><code class="descname">github_analysis</code><span class="sig-paren">(</span><em>repository</em>, <em>username</em>, <em>userlogin</em>, <em>password</em>, <em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/github_analysis.html#github_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.github_analysis.github_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Analyse a specific repository.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.github_analysis.github_login">
+<code class="descclassname">platform_analysis.github_analysis.</code><code class="descname">github_login</code><span class="sig-paren">(</span><em>userlogin</em>, <em>username</em>, <em>password</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/github_analysis.html#github_login"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.github_analysis.github_login" title="Permalink to this definition">¶</a></dt>
+<dd><p>Login on GitHub in order to retrieve a dict of repositories
+for a given username.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.github_analysis.issue_analysis">
+<code class="descclassname">platform_analysis.github_analysis.</code><code class="descname">issue_analysis</code><span class="sig-paren">(</span><em>issue</em>, <em>graph</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/github_analysis.html#issue_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.github_analysis.issue_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Analyse the discussion of a single issue.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.github_analysis.pull_requests_analysis">
+<code class="descclassname">platform_analysis.github_analysis.</code><code class="descname">pull_requests_analysis</code><span class="sig-paren">(</span><em>repository</em>, <em>graph</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/github_analysis.html#pull_requests_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.github_analysis.pull_requests_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Analyse the discussion of pull requests of a repository.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.github_analysis.repo_analysis">
+<code class="descclassname">platform_analysis.github_analysis.</code><code class="descname">repo_analysis</code><span class="sig-paren">(</span><em>repository</em>, <em>path</em>, <em>graph</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/github_analysis.html#repo_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.github_analysis.repo_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Analyse a specific GitHub repo.</p>
+</dd></dl>
+
 </div>
-<div class="section" id="platform-analysis-hg-module">
-<h2>platform_analysis.hg module<a class="headerlink" href="#platform-analysis-hg-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-platform_analysis.hg">
+<span id="platform-analysis-hg-module"></span><h2>platform_analysis.hg module<a class="headerlink" href="#module-platform_analysis.hg" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="platform_analysis.hg.get_log">
+<code class="descclassname">platform_analysis.hg.</code><code class="descname">get_log</code><span class="sig-paren">(</span><em>projectpath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/hg.html#get_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.hg.get_log" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </div>
-<div class="section" id="platform-analysis-sna-module">
-<h2>platform_analysis.sna module<a class="headerlink" href="#platform-analysis-sna-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-platform_analysis.sna">
+<span id="platform-analysis-sna-module"></span><h2>platform_analysis.sna module<a class="headerlink" href="#module-platform_analysis.sna" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="platform_analysis.sna.graph_to_pandas_time_series">
+<code class="descclassname">platform_analysis.sna.</code><code class="descname">graph_to_pandas_time_series</code><span class="sig-paren">(</span><em>graph</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/sna.html#graph_to_pandas_time_series"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.sna.graph_to_pandas_time_series" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform a graph into a pandas time series DataFrame.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.sna.save_graph">
+<code class="descclassname">platform_analysis.sna.</code><code class="descname">save_graph</code><span class="sig-paren">(</span><em>graph</em>, <em>filename</em>, <em>self_loops</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/sna.html#save_graph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.sna.save_graph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Transform date on a graph to string and save as a graphml file</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.sna.time_analysis">
+<code class="descclassname">platform_analysis.sna.</code><code class="descname">time_analysis</code><span class="sig-paren">(</span><em>data</em>, <em>focus</em>, <em>interaction</em>, <em>structure</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/sna.html#time_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.sna.time_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Analyse a pandas time series DataFrame.
+Returns a DataFrame. If structure == “combined”.
+Returns a Series with all the interactions merged.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="platform_analysis.sna.type_stats">
+<code class="descclassname">platform_analysis.sna.</code><code class="descname">type_stats</code><span class="sig-paren">(</span><em>data</em>, <em>focus</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/sna.html#type_stats"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.sna.type_stats" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a DataFrame or a dict of DataFrames for global type stats.
+Helper function for speeding up analysis.</p>
+</dd></dl>
+
 </div>
-<div class="section" id="platform-analysis-svn-module">
-<h2>platform_analysis.svn module<a class="headerlink" href="#platform-analysis-svn-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-platform_analysis.svn">
+<span id="platform-analysis-svn-module"></span><h2>platform_analysis.svn module<a class="headerlink" href="#module-platform_analysis.svn" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="platform_analysis.svn.get_log">
+<code class="descclassname">platform_analysis.svn.</code><code class="descname">get_log</code><span class="sig-paren">(</span><em>projectpath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/svn.html#get_log"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.svn.get_log" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 </div>
-<div class="section" id="platform-analysis-utils-module">
-<h2>platform_analysis.utils module<a class="headerlink" href="#platform-analysis-utils-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-platform_analysis.utils">
+<span id="platform-analysis-utils-module"></span><h2>platform_analysis.utils module<a class="headerlink" href="#module-platform_analysis.utils" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="platform_analysis.utils.convert_log_to_dict">
+<code class="descclassname">platform_analysis.utils.</code><code class="descname">convert_log_to_dict</code><span class="sig-paren">(</span><em>input_text</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/platform_analysis/utils.html#convert_log_to_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#platform_analysis.utils.convert_log_to_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the git log output to json.</p>
+</dd></dl>
+
 </div>
-<div class="section" id="module-contents">
-<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-platform_analysis">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-platform_analysis" title="Permalink to this headline">¶</a></h2>
 </div>
 </div>
 

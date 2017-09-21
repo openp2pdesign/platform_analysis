@@ -1,0 +1,572 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>platform_analysis.git &mdash; platform_analysis 0.2 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  
+
+  
+
+  
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+        <link rel="search" title="Search" href="../../search.html"/>
+    <link rel="top" title="platform_analysis 0.2 documentation" href="../../index.html"/>
+        <link rel="up" title="Module code" href="../index.html"/> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+   
+  <div class="wy-grid-for-nav">
+
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> platform_analysis
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.2
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" role="navigation" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">platform_analysis</a>
+        
+      </nav>
+
+
+      
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>platform_analysis.git</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for platform_analysis.git</h1><div class="highlight"><pre>
+<span></span><span class="c1"># -*- encoding: utf-8 -*-</span>
+<span class="c1">#</span>
+<span class="c1"># Social Network Analysis of Git, Hg, SVN, GitHub, BitBucket repositories</span>
+<span class="c1">#</span>
+<span class="c1"># Author: Massimo Menichinelli</span>
+<span class="c1"># Homepage: http://www.openp2pdesign.org</span>
+<span class="c1"># License: LGPL v.3</span>
+<span class="c1">#</span>
+
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">from</span> <span class="nn">splitstream</span> <span class="k">import</span> <span class="n">splitfile</span>
+<span class="kn">import</span> <span class="nn">StringIO</span>
+<span class="kn">import</span> <span class="nn">unicodedata</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
+<span class="kn">from</span> <span class="nn">dateutil.parser</span> <span class="k">import</span> <span class="n">parse</span>
+
+<span class="kn">import</span> <span class="nn">github_analysis</span>
+
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+
+
+<div class="viewcode-block" id="convert_log_to_dict"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.git.convert_log_to_dict">[docs]</a><span class="k">def</span> <span class="nf">convert_log_to_dict</span><span class="p">(</span><span class="n">input_text</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert the git log output to json.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">items</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="n">StringIO</span><span class="o">.</span><span class="n">StringIO</span><span class="p">(</span><span class="n">input_text</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">jsonstr</span> <span class="ow">in</span> <span class="n">splitfile</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;json&quot;</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">items</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">jsonstr</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">e</span>
+
+    <span class="k">return</span> <span class="n">items</span></div>
+
+
+<div class="viewcode-block" id="get_commits_log"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.git.get_commits_log">[docs]</a><span class="k">def</span> <span class="nf">get_commits_log</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the history of the commits of a git repository into a dict.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># The pretty format for all the information from the log</span>
+    <span class="n">log_pretty_format</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;{%n</span>
+<span class="s1">    &quot;@node&quot;: &quot;%H&quot;,%n</span>
+<span class="s1">    &quot;date&quot;: &quot;%aD&quot;,%n</span>
+<span class="s1">    &quot;msg&quot;: &quot;</span><span class="si">%f</span><span class="s1">&quot;,%n</span>
+<span class="s1">    &quot;author&quot;: {%n</span>
+<span class="s1">    &quot;#text&quot;: &quot;%aN&quot;,%n</span>
+<span class="s1">    &quot;@email&quot;: &quot;%aE&quot;%n</span>
+<span class="s1">    },%n</span>
+<span class="s1">    &quot;committer&quot;: {%n</span>
+<span class="s1">    &quot;#text&quot;: &quot;</span><span class="si">%c</span><span class="s1">N&quot;,%n</span>
+<span class="s1">    &quot;@email&quot;: &quot;</span><span class="si">%c</span><span class="s1">E&quot;%n</span>
+<span class="s1">    }%n},&#39;&#39;&#39;</span>
+
+    <span class="c1"># Get the verbose log in json</span>
+    <span class="n">git_log</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
+        <span class="p">[</span><span class="s1">&#39;git&#39;</span><span class="p">,</span> <span class="s1">&#39;log&#39;</span><span class="p">,</span> <span class="s1">&#39;--pretty=format:&#39;</span> <span class="o">+</span> <span class="n">log_pretty_format</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="c1"># Convert to a dict</span>
+    <span class="n">all_commits</span> <span class="o">=</span> <span class="n">convert_log_to_dict</span><span class="p">(</span><span class="n">git_log</span><span class="p">)</span>
+
+    <span class="c1"># Do a diff-tree for each commit</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">all_commits</span><span class="p">:</span>
+
+        <span class="c1"># Load the current commit id</span>
+        <span class="n">current_commit</span> <span class="o">=</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span>
+            <span class="s1">&#39;NFKD&#39;</span><span class="p">,</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;@node&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">,</span> <span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Create the command for diff-tree</span>
+        <span class="n">current_command</span> <span class="o">=</span> <span class="s1">&#39;git diff-tree --no-commit-id --name-status -r &#39;</span> <span class="o">+</span> \
+            <span class="n">current_commit</span>
+
+        <span class="c1"># Get the log of the files for the current commit</span>
+        <span class="n">git_commit_files_log</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">current_command</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Split the output in a list of files</span>
+        <span class="n">current_files_list</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">git_commit_files_log</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span>
+        <span class="p">]</span>
+
+        <span class="c1"># Create an empty dict for files for the current commit</span>
+        <span class="n">i</span><span class="p">[</span><span class="s2">&quot;paths&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="c1"># Cycle through each file changed in the current commit</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">current_files_list</span><span class="p">):</span>
+            <span class="c1"># Split action and filename, and save them as a dict</span>
+            <span class="n">each_file_info</span> <span class="o">=</span> <span class="n">j</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="n">i</span><span class="p">[</span><span class="s2">&quot;paths&quot;</span><span class="p">][</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;@action&quot;</span><span class="p">:</span> <span class="n">each_file_info</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="s2">&quot;#text&quot;</span><span class="p">:</span> <span class="n">each_file_info</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+            <span class="p">}</span>
+
+    <span class="c1"># Format the log like hg and svn</span>
+    <span class="n">all_commits</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;log&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;logentry&quot;</span><span class="p">:</span> <span class="n">all_commits</span><span class="p">}}</span>
+
+    <span class="c1"># Return the full log with files changed at each commit</span>
+    <span class="k">return</span> <span class="n">all_commits</span></div>
+
+
+<div class="viewcode-block" id="get_files_log"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.git.get_files_log">[docs]</a><span class="k">def</span> <span class="nf">get_files_log</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get the history of each edited file in a git repository into a dict.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># The pretty format for the file log</span>
+    <span class="n">log_pretty_format</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;{%n</span>
+<span class="s1">    &quot;@node&quot;: &quot;%H&quot;,%n</span>
+<span class="s1">    &quot;date&quot;: &quot;%aD&quot;,%n</span>
+<span class="s1">    &quot;msg&quot;: &quot;</span><span class="si">%f</span><span class="s1">&quot;,%n</span>
+<span class="s1">    &quot;author&quot;: {%n</span>
+<span class="s1">    &quot;#text&quot;: &quot;%aN&quot;,%n</span>
+<span class="s1">    &quot;@email&quot;: &quot;%aE&quot;%n</span>
+<span class="s1">    },%n</span>
+<span class="s1">    &quot;committer&quot;: {%n</span>
+<span class="s1">    &quot;#text&quot;: &quot;</span><span class="si">%c</span><span class="s1">N&quot;,%n</span>
+<span class="s1">    &quot;@email&quot;: &quot;</span><span class="si">%c</span><span class="s1">E&quot;%n</span>
+<span class="s1">    }%n},&#39;&#39;&#39;</span>
+
+    <span class="c1"># Get the verbose log in json</span>
+    <span class="n">git_log</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
+        <span class="p">[</span><span class="s1">&#39;git&#39;</span><span class="p">,</span> <span class="s1">&#39;log&#39;</span><span class="p">,</span> <span class="s1">&#39;--pretty=format:&#39;</span> <span class="o">+</span> <span class="n">log_pretty_format</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+
+    <span class="c1"># Convert to a dict</span>
+    <span class="n">all_commits</span> <span class="o">=</span> <span class="n">convert_log_to_dict</span><span class="p">(</span><span class="n">git_log</span><span class="p">)</span>
+
+    <span class="c1"># Create a list of edited files</span>
+    <span class="n">edited_files</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="c1"># Do a diff-tree for each commit</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">all_commits</span><span class="p">:</span>
+
+        <span class="c1"># Load the current commit id</span>
+        <span class="n">current_commit</span> <span class="o">=</span> <span class="n">unicodedata</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span>
+            <span class="s1">&#39;NFKD&#39;</span><span class="p">,</span> <span class="n">i</span><span class="p">[</span><span class="s2">&quot;@node&quot;</span><span class="p">])</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;ascii&#39;</span><span class="p">,</span> <span class="s1">&#39;ignore&#39;</span><span class="p">)</span>
+
+        <span class="c1"># Create the command for diff-tree</span>
+        <span class="n">current_command</span> <span class="o">=</span> <span class="s1">&#39;git diff-tree --no-commit-id --name-status -r &#39;</span> <span class="o">+</span> \
+            <span class="n">current_commit</span>
+
+        <span class="c1"># Get the log of the files for the current commit</span>
+        <span class="n">git_commit_files_log</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">current_command</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="c1"># Split the output in a list of files</span>
+        <span class="n">current_files_list</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">line</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">git_commit_files_log</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">!=</span> <span class="s1">&#39;&#39;</span>
+        <span class="p">]</span>
+
+        <span class="c1"># Cycle through each file changed in the current commit</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">current_files_list</span><span class="p">):</span>
+            <span class="c1"># Split action and filename, and save them as a dict</span>
+            <span class="n">each_file_info</span> <span class="o">=</span> <span class="n">j</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\t</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">each_file_info</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">edited_files</span><span class="p">:</span>
+                <span class="n">edited_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">each_file_info</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="c1"># Get the verbose log for each file in the history in json</span>
+    <span class="n">git_all_files_log</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">each_file</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">edited_files</span><span class="p">):</span>
+        <span class="n">current_file_log</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">(</span>
+            <span class="p">[</span><span class="s1">&#39;git&#39;</span><span class="p">,</span> <span class="s1">&#39;log&#39;</span><span class="p">,</span> <span class="s1">&#39;--pretty=format:&#39;</span> <span class="o">+</span> <span class="n">log_pretty_format</span><span class="p">,</span> <span class="s1">&#39;--follow&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">each_file</span><span class="p">],</span>
+            <span class="n">cwd</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+        <span class="n">git_all_files_log</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">each_file</span><span class="p">)]</span> <span class="o">=</span> <span class="n">convert_log_to_dict</span><span class="p">(</span>
+            <span class="n">current_file_log</span><span class="p">)</span>
+
+    <span class="c1"># Format the log like hg and svn</span>
+    <span class="n">all_files</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;log&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;logentry&quot;</span><span class="p">:</span> <span class="n">git_all_files_log</span><span class="p">}}</span>
+
+    <span class="c1"># Return the full log with the history of each file</span>
+    <span class="k">return</span> <span class="n">all_files</span></div>
+
+
+<div class="viewcode-block" id="git_repo_analysis"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.git.git_repo_analysis">[docs]</a><span class="k">def</span> <span class="nf">git_repo_analysis</span><span class="p">(</span><span class="n">git_files_log</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The main function of SNA for a git repo.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># For each file, check its history and connect committers based on</span>
+    <span class="c1"># commit order: connect each committer with the previous ones for the</span>
+    <span class="c1"># same file (path dependency)</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">each_file</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">git_files_log</span><span class="p">):</span>
+        <span class="n">file_history</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">l</span><span class="p">,</span> <span class="n">each_commit</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">git_files_log</span><span class="p">[</span><span class="n">each_file</span><span class="p">]):</span>
+            <span class="n">file_history</span><span class="p">[</span><span class="n">l</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;author&quot;</span><span class="p">:</span> <span class="n">each_commit</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;#text&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;email&quot;</span><span class="p">:</span> <span class="n">each_commit</span><span class="p">[</span><span class="s2">&quot;author&quot;</span><span class="p">][</span><span class="s2">&quot;@email&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;date&quot;</span><span class="p">:</span> <span class="n">each_commit</span><span class="p">[</span><span class="s2">&quot;date&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;@node&quot;</span><span class="p">:</span> <span class="n">each_commit</span><span class="p">[</span><span class="s2">&quot;@node&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;msg&quot;</span><span class="p">:</span> <span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">each_commit</span><span class="p">[</span><span class="s2">&quot;msg&quot;</span><span class="p">])</span>
+            <span class="p">}</span>
+
+        <span class="c1"># Sort the dict in order to be sure about the chronological order</span>
+        <span class="c1"># of the file history</span>
+        <span class="n">sorted_file_history</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">(</span>
+            <span class="nb">sorted</span><span class="p">(</span>
+                <span class="n">file_history</span><span class="o">.</span><span class="n">iteritems</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;date&#39;</span><span class="p">]))</span>
+
+        <span class="c1"># Add an edge from a committer to the previous ones</span>
+        <span class="c1"># since there are interactions on the same file</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">sorted_file_history</span><span class="p">:</span>
+
+            <span class="c1"># Add the committers in case they are not in the graph</span>
+            <span class="k">if</span> <span class="n">sorted_file_history</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s2">&quot;author&quot;</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">:</span>
+                <span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span>
+                    <span class="n">sorted_file_history</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s2">&quot;author&quot;</span><span class="p">],</span> <span class="n">committer</span><span class="o">=</span><span class="s2">&quot;Yes&quot;</span><span class="p">,</span>
+                    <span class="n">email</span><span class="o">=</span><span class="n">sorted_file_history</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s2">&quot;email&quot;</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">graph</span><span class="o">.</span><span class="n">node</span><span class="p">[</span><span class="n">sorted_file_history</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s2">&quot;author&quot;</span><span class="p">]][</span><span class="s2">&quot;committer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Yes&quot;</span>
+
+            <span class="c1"># Look for the interactions</span>
+            <span class="n">following_committers</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">j</span><span class="p">):</span>
+                <span class="n">following_committers</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">sorted_file_history</span><span class="p">[</span><span class="n">m</span><span class="p">])</span>
+            <span class="c1">#following_committers[j] = sorted_file_history[j][&quot;author&quot;]</span>
+            <span class="n">reversed_following_committers</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">(</span>
+                <span class="nb">sorted</span><span class="p">(</span>
+                    <span class="n">following_committers</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+
+            <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">following_committers</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">t</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">reversed_following_committers</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">first_actor</span> <span class="o">=</span> <span class="n">reversed_following_committers</span><span class="p">[</span><span class="n">t</span><span class="p">][</span><span class="s2">&quot;author&quot;</span><span class="p">]</span>
+                    <span class="n">second_actor</span> <span class="o">=</span> <span class="n">sorted_file_history</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s2">&quot;author&quot;</span><span class="p">]</span>
+                    <span class="c1"># Add the nodes of the edge</span>
+                    <span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">first_actor</span><span class="p">,</span> <span class="n">Label</span><span class="o">=</span><span class="n">first_actor</span><span class="p">)</span>
+                    <span class="n">graph</span><span class="o">.</span><span class="n">add_node</span><span class="p">(</span><span class="n">first_actor</span><span class="p">,</span> <span class="n">Label</span><span class="o">=</span><span class="n">second_actor</span><span class="p">)</span>
+                    <span class="c1"># Add the edge</span>
+                    <span class="n">github_analysis</span><span class="o">.</span><span class="n">edge_key</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="n">graph</span><span class="o">.</span><span class="n">add_edge</span><span class="p">(</span>
+                        <span class="n">first_actor</span><span class="p">,</span>
+                        <span class="n">second_actor</span><span class="p">,</span>
+                        <span class="n">key</span><span class="o">=</span><span class="n">github_analysis</span><span class="o">.</span><span class="n">edge_key</span><span class="p">,</span>
+                        <span class="n">node</span><span class="o">=</span><span class="n">sorted_file_history</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s2">&quot;@node&quot;</span><span class="p">],</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;commit&quot;</span><span class="p">,</span>
+                        <span class="n">msg</span><span class="o">=</span><span class="n">re</span><span class="o">.</span><span class="n">sub</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;-&#39;</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="n">sorted_file_history</span><span class="p">[</span><span class="n">j</span><span class="p">][</span><span class="s2">&quot;msg&quot;</span><span class="p">]),</span>
+                        <span class="n">start</span><span class="o">=</span><span class="n">parse</span><span class="p">(</span><span class="n">reversed_following_committers</span><span class="p">[</span><span class="n">t</span><span class="p">][</span><span class="s2">&quot;date&quot;</span><span class="p">]),</span>
+                        <span class="n">endopen</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span><span class="o">.</span><span class="n">year</span><span class="p">)</span>
+                    <span class="c1"># start=parse(sorted_file_history[j][&quot;date&quot;]),</span>
+
+    <span class="k">return</span> <span class="n">graph</span></div>
+
+
+<div class="viewcode-block" id="git_remote_repo_log"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.git.git_remote_repo_log">[docs]</a><span class="k">def</span> <span class="nf">git_remote_repo_log</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">log_type</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Clone, retrieve the log of (and then remove the local copy) a remote git repository.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># If we are on Linux or Mac</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;posix&quot;</span><span class="p">:</span>
+        <span class="n">tmp_dir</span> <span class="o">=</span> <span class="s2">&quot;git.py.tmp&quot;</span>
+        <span class="n">where</span> <span class="o">=</span> <span class="n">path</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">tmp_dir</span>
+
+        <span class="c1"># Remove the temporary directory if it exists</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">where</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">where</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">e</span><span class="o">.</span><span class="n">returncode</span>
+
+        <span class="c1"># Git clone to the temporary directory</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;clone&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">where</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">e</span><span class="o">.</span><span class="n">returncode</span>
+
+        <span class="c1"># Load the log output</span>
+        <span class="k">if</span> <span class="n">log_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;files&quot;</span> <span class="ow">or</span> <span class="n">log_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;file&quot;</span><span class="p">:</span>
+            <span class="n">git_log</span> <span class="o">=</span> <span class="n">get_files_log</span><span class="p">(</span><span class="n">where</span><span class="p">)[</span><span class="s2">&quot;log&quot;</span><span class="p">][</span><span class="s2">&quot;logentry&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">git_log</span> <span class="o">=</span> <span class="n">get_commits_log</span><span class="p">(</span><span class="n">where</span><span class="p">)[</span><span class="s2">&quot;log&quot;</span><span class="p">][</span><span class="s2">&quot;logentry&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Remove the temporary directory if it exists</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">where</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">where</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">e</span><span class="o">.</span><span class="n">returncode</span>
+
+    <span class="k">return</span> <span class="n">git_log</span></div>
+
+
+<div class="viewcode-block" id="git_remote_repo_analysis"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.git.git_remote_repo_analysis">[docs]</a><span class="k">def</span> <span class="nf">git_remote_repo_analysis</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">path</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Clone, analyse (and then remove the local copy) a remote git repository.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># If we are on Linux or Mac</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;posix&quot;</span><span class="p">:</span>
+        <span class="n">tmp_dir</span> <span class="o">=</span> <span class="s2">&quot;git.py.tmp&quot;</span>
+        <span class="n">where</span> <span class="o">=</span> <span class="n">path</span> <span class="o">+</span> <span class="s2">&quot;/&quot;</span> <span class="o">+</span> <span class="n">tmp_dir</span>
+
+        <span class="c1"># Remove the temporary directory if it exists</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">where</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">where</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">e</span><span class="o">.</span><span class="n">returncode</span>
+
+        <span class="c1"># Git clone to the temporary directory</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">subprocess</span><span class="o">.</span><span class="n">check_output</span><span class="p">([</span><span class="s2">&quot;git&quot;</span><span class="p">,</span> <span class="s2">&quot;clone&quot;</span><span class="p">,</span> <span class="n">url</span><span class="p">,</span> <span class="n">where</span><span class="p">],</span> <span class="n">cwd</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">e</span><span class="o">.</span><span class="n">returncode</span>
+
+        <span class="c1"># Load the log output for each file</span>
+        <span class="n">git_files_log</span> <span class="o">=</span> <span class="n">get_files_log</span><span class="p">(</span><span class="n">where</span><span class="p">)[</span><span class="s2">&quot;log&quot;</span><span class="p">][</span><span class="s2">&quot;logentry&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Analyse the repo</span>
+        <span class="n">git_repo_analysis</span><span class="p">(</span><span class="n">git_files_log</span><span class="o">=</span><span class="n">git_files_log</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+
+        <span class="c1"># Remove the temporary directory if it exists</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">where</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">where</span><span class="p">)</span>
+            <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">e</span><span class="o">.</span><span class="n">returncode</span>
+
+    <span class="k">return</span> <span class="n">graph</span></div>
+
+
+<div class="viewcode-block" id="git_local_repo_analysis"><a class="viewcode-back" href="../../platform_analysis.html#platform_analysis.git.git_local_repo_analysis">[docs]</a><span class="k">def</span> <span class="nf">git_local_repo_analysis</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Analyse a local git repository.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># If we are on Linux or Mac</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;posix&quot;</span><span class="p">:</span>
+
+        <span class="c1"># Load the log output for each file</span>
+        <span class="n">git_files_log</span> <span class="o">=</span> <span class="n">get_files_log</span><span class="p">(</span><span class="n">path</span><span class="p">)[</span><span class="s2">&quot;log&quot;</span><span class="p">][</span><span class="s2">&quot;logentry&quot;</span><span class="p">]</span>
+
+        <span class="c1"># Analyse the repo</span>
+        <span class="n">git_repo_analysis</span><span class="p">(</span><span class="n">git_files_log</span><span class="o">=</span><span class="n">git_files_log</span><span class="p">,</span> <span class="n">graph</span><span class="o">=</span><span class="n">graph</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">graph</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="k">pass</span>
+</pre></div>
+
+           </div>
+           <div class="articleComments">
+            
+           </div>
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2017, Massimo Menichinelli.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/snide/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'0.2',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'.html',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  
+  
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.StickyNav.enable();
+      });
+  </script>
+   
+
+</body>
+</html>
