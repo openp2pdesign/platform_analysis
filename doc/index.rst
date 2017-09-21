@@ -15,6 +15,7 @@ A Python library for Social Network Analysis of online collaboration platforms a
    install
    intro
    tutorial
+   research
    credits
 
 
