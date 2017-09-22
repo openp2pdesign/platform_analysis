@@ -18,6 +18,7 @@ A Python library for Social Network Analysis of online collaboration platforms a
    research
    credits
 
+You can also download the tutorial as a :download:`Jupyter Notebook <platform_analysis_example.ipynb>`
 
 
 Indices and tables
