@@ -14,7 +14,6 @@ A Python library for Social Network Analysis of online collaboration platforms a
    :caption: Contents:
 
    install
-   intro
    platform_analysis_example.ipynb
    research
    credits
