@@ -1,8 +1,10 @@
 # Mac
 *.DS_Store
 
-# Build folder for documentation
+# Documentation
 doc/_build/
+doc/*.pdf
+doc/*.graphml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
