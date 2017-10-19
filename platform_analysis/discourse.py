@@ -13,15 +13,12 @@ import networkx as nx
 import datetime
 
 
-def get_discourse_data(url, api_username, api_key):
+def discourse_analysis(url, api_username, api_key):
     """
     Get the data from a Discourse instance.
     """
 
     client = DiscourseClient(url, api_username=api_username, api_key=api_key)
-
-    # test = client.posts(topic_id=19)
-    # print test
 
     # Get categories
     categories = client.categories()
@@ -30,6 +27,7 @@ def get_discourse_data(url, api_username, api_key):
     pagination = True
     paginated_content = []
     page_count = 0
+    topics = []
     # Get the data of the paginated topics
     topics_request = client.latest_topics()
     while pagination:
@@ -48,7 +46,16 @@ def get_discourse_data(url, api_username, api_key):
     for page in paginated_content:
         for key in page:
             if key == "topic_list":
-                print page[key]
+                for topic in page[key]["topics"]:
+                    # Get the id of each topic
+                    topic_id = topic["id"]
+                    topic_content = client.posts(topic_id=topic_id)
+                    topics.append(topic_content)
+                    for element in topic_content:
+                        if element == "post_stream":
+                            for post in topic_content[element]["posts"]:
+                                print post
+                    exit()
 
 
 if __name__ == "__main__":
