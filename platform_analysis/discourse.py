@@ -167,8 +167,27 @@ def discourse_analysis(url, api_username, api_key):
                                      'staff': post["staff"]}
                                 }
                                 topic_posts.append(this_post)
+                                # Add user as a node
+                                username = str(this_post["author"]["#text"])
 
-                    # Analyse each commit and its comments
+                                local_graph.add_node(username)
+                                print username
+                                print local_graph
+                                print type(local_graph)
+                                print local_graph.nodes
+                                print "node: ", local_graph.nodes[username]
+                                local_graph.nodes[username]["#text"] = post["username"]
+                                local_graph.nodes[username]["full_name"] = post["name"]
+                                local_graph.nodes[username]["id"] = post["user_id"]
+                                local_graph.nodes[username]["trust_level"] = post["trust_level"]
+                                local_graph.nodes[username]["moderator"] = post["moderator"]
+                                local_graph.nodes[username]["admin"] = post["admin"]
+                                local_graph.nodes[username]["staff"] = post["staff"]
+                                # Avatar url
+                                avatar_url = url + post["avatar_template"].replace('{size}', '90')
+                                local_graph.nodes[username]["avatar_url"] = avatar_url
+
+                    # Analyze each commit and its comments
                     topic_posts_ordered = {}
                     for i in topic_posts:
                         if i['@node'] not in topic_posts_ordered:
@@ -177,15 +196,11 @@ def discourse_analysis(url, api_username, api_key):
                             topic_posts_index = next(
                                 (index for index, d in enumerate(topic_posts)
                                  if d['@node'] == i['@node']))
-                            topic_posts_ordered[i['@node']].append(topic_posts[
-                                topic_posts_index])
+                            topic_posts_ordered[i['@node']].append(topic_posts[topic_posts_index])
                             topic_posts_ordered[i['@node']].append(i)
                         else:
                             topic_posts_ordered[i['@node']].append(i)
                     for each_post in topic_posts_ordered:
-                        topic_analysis(topic_posts_ordered[each_post],
-                                       graph,
-                                       comment_type="discourse post")
                         topic_analysis(topic_posts_ordered[each_post],
                                        local_graph,
                                        comment_type="discourse post")
