@@ -48,7 +48,7 @@ def topic_analysis(discussion, graph, comment_type):
 
             # Check if there are any username mentions in the body of each
             # comment, and add an edge if there are any
-            message_body = f["cooked"]
+            message_body = f["msg"]
             message_body_split = message_body.split()
             for word in message_body_split:
                 # If the word is an username...
@@ -70,11 +70,13 @@ def topic_analysis(discussion, graph, comment_type):
                                 edge_key += 1
                                 graph.add_edge(
                                     f["author"]["#text"], word, key=edge_key,
-                                    type="mention in a discourse post", start=f["date"],
+                                    type="mention in a discourse post",
+                                    start=f["date"],
                                     endopen=datetime.datetime.now().year)
                                 local_graph.add_edge(
                                     f["author"]["#text"], word, key=edge_key,
-                                    type="mention in a discourse post", start=f["date"],
+                                    type="mention in a discourse post",
+                                    start=f["date"],
                                     endopen=datetime.datetime.now().year)
 
     return local_graph
@@ -116,7 +118,14 @@ def discourse_analysis(url, api_username, api_key):
     Analyse a Discourse instance.
     """
 
+    # Get data
     paginated_content = get_discourse_content(url, api_username, api_key)
+
+    # Local graph variable
+    local_graph = nx.MultiDiGraph()
+
+    # Connect with the Discourse API
+    client = DiscourseClient(url, api_username=api_username, api_key=api_key)
 
     # Browse the paginated topics
     topics = []
@@ -135,34 +144,49 @@ def discourse_analysis(url, api_username, api_key):
                     for element in topic_content:
                         if element == "post_stream":
                             for post in topic_content[element]["posts"]:
-                                this_post = {'@node': post["id"],
-                                               'date': post["created_at"],
-                                               'msg': post["cooked"],
-                                               'reply_to_post_number': post["reply_to_post_number"],
-                                               'reply_count': post["reply_count"],
-                                               'quote_count': post["quote_count"],
-                                               'author':
-                                               {'#text': post["name"],
-                                                '@username': post["username"],
-                                                'id': post["user_id"],
-                                                'avatar_url': post["avatar_template"],
-                                                'trust_level': post["trust_level"],
-                                                'moderator': post["moderator"],
-                                                'admin': post["admin"],
-                                                'staff': post["staff"]
-                                                }}
+                                this_post = {
+                                    '@node': post["id"],
+                                    'date': post["created_at"],
+                                    'msg': post["cooked"],
+                                    'reply_to_post_number':
+                                    post["reply_to_post_number"],
+                                    'reply_count': post["reply_count"],
+                                    'quote_count': post["quote_count"],
+                                    'author':
+                                    {'#text': post["name"],
+                                     '@username': post["username"],
+                                     'id': post["user_id"],
+                                     'avatar_url': post["avatar_template"],
+                                     'trust_level': post["trust_level"],
+                                     'moderator': post["moderator"],
+                                     'admin': post["admin"],
+                                     'staff': post["staff"]}
+                                }
                                 topic_posts.append(this_post)
 
         # Analyse each commit and its comments
-        for each_post in topic_posts:
-            comments_analysis(
-                each_post,
-                graph,
-                comment_type="discourse post")
-            comments_analysis(
-                each_post,
-                local_graph,
-                comment_type="discourse post")
+        topic_posts_ordered = {}
+        for i in topic_posts:
+            if i['@node'] not in topic_posts_ordered:
+                topic_posts_ordered[i['@node']] = []
+                # Add the commit to the comments, it is part of the discussion
+                topic_posts_index = next(
+                    (index for index, d in enumerate(topic_posts)
+                     if d['@node'] == i['@node']))
+                topic_posts_ordered[i['@node']].append(topic_posts[
+                    topic_posts_index])
+                topic_posts_ordered[i['@node']].append(i)
+            else:
+                topic_posts_ordered[i['@node']].append(i)
+        for each_post in topic_posts_ordered:
+            topic_analysis(topic_posts_ordered[each_post],
+                           graph,
+                           comment_type="discourse post")
+            topic_analysis(topic_posts_ordered[each_post],
+                           local_graph,
+                           comment_type="discourse post")
+
+        return local_graph
 
 
 if __name__ == "__main__":
