@@ -9,79 +9,73 @@
 
 
 import re
-import string
-
 from pydiscourse import DiscourseClient
 import networkx as nx
 import datetime
 
 
-# Global variables
-# Edge counting
-edge_key = 0
-# The main graph
-graph = nx.MultiDiGraph()
-
-
-def topic_analysis(discussion, graph, comment_type):
+def discourse_topic_discussion_analysis(discussion):
     """
     Analyse the discussion of a single Discourse topic (thread of posts).
     Add edges to the graph and return a graph of the specified discussion.
     """
-
-    # Global variable
-    global edge_key
 
     # Local graph variable
     local_graph = nx.MultiDiGraph()
 
     # Check all the posts in the topic
     for j, f in enumerate(discussion):
-        # Add an edge to all the previous participants in the discussion
-        for k in discussion[:j]:
-            edge_key += 1
-            graph.add_edge(
-                f["author"]["#text"], k["author"]["#text"], key=edge_key,
-                node=f["@node"], type=comment_type, msg=f["msg"],
-                start=f["date"], endopen=datetime.datetime.now().year)
+        # Add an edge when the reply was specific to a post
+        if f["reply_to_post_number"] is not None:
+            # Find the author of the post replid by post number
+            for t in discussion:
+                if t["post_number"] == f["reply_to_post_number"]:
+                    local_graph.add_edge(
+                        f["author"]["#text"], t["author"]["#text"],
+                        type="Direct reply to post in a Discourse topic",
+                        slug=f["slug"],
+                        title=f["title"],
+                        category=f["category"],
+                        post_number=f["post_number"],
+                        reply_to_post_number=f["reply_to_post_number"],
+                        node=f["@node"],
+                        msg=f["msg"],
+                        start=f["date"],
+                        endopen=datetime.datetime.now().year)
+
+        # Check if there are any username mentions in the body of each
+        # comment, and add an edge if there are any
+        message_body = f["msg"]
+        message_mention = 'a class="mention" href="/u/'
+        for m in re.finditer(message_mention, message_body):
+            start_of_mention = message_body.find('">', m.end())+len('">')
+            end_of_mention = message_body.find('<', start_of_mention)
+            user_mentioned = message_body[start_of_mention:end_of_mention].replace("@","")
             local_graph.add_edge(
-                f["author"]["#text"], k["author"]["#text"], key=edge_key,
-                type=comment_type, node=f["@node"], date=f["date"],
-                msg=f["msg"], start=f["date"],
+                f["author"]["#text"], user_mentioned,
+                type="Mention in a Discourse post",
+                slug=f["slug"],
+                title=f["title"],
+                category=f["category"],
+                post_number=f["post_number"],
+                node=f["@node"],
+                start=f["date"],
+                msg=f["msg"],
                 endopen=datetime.datetime.now().year)
 
-            # Check if there are any username mentions in the body of each
-            # comment, and add an edge if there are any
-            message_body = f["msg"]
-            message_body_split = message_body.split()
-            for word in message_body_split:
-                # If the word is an username...
-                if "@" in word:
-                    # Check that it is a username and not an e-mail address
-                    email_check = re.findall(r'[\w\.-]+@[\w\.-]+', word)
-                    # If it is not an e-mail address but an username, add an
-                    # edge
-                    if len(email_check) == 0:
-                        # Remove the @ mention char
-                        word = re.sub(r'@', "", word)
-                        # If the username is a word longer than 0 chars, then
-                        # create an edge from the issue comment author to the
-                        # mentioned username
-                        if len(word) != 0:
-                            # Remove strange punctuation at the end, if any
-                            if word[-1] in string.punctuation:
-                                word = word[:-1]
-                                edge_key += 1
-                                graph.add_edge(
-                                    f["author"]["#text"], word, key=edge_key,
-                                    type="mention in a discourse post",
-                                    start=f["date"],
-                                    endopen=datetime.datetime.now().year)
-                                local_graph.add_edge(
-                                    f["author"]["#text"], word, key=edge_key,
-                                    type="mention in a discourse post",
-                                    start=f["date"],
-                                    endopen=datetime.datetime.now().year)
+        # Add an edge to all the previous participants in the discussion
+        for k in discussion[:j]:
+            local_graph.add_edge(
+                f["author"]["#text"], k["author"]["#text"],
+                type="Joining the discussion with previous posts in a Discourse topic",
+                slug=f["slug"],
+                title=f["title"],
+                category=f["category"],
+                post_number=f["post_number"],
+                node=f["@node"],
+                msg=f["msg"],
+                start=f["date"],
+                endopen=datetime.datetime.now().year)
 
     return local_graph
 
@@ -98,6 +92,12 @@ def get_discourse_content(url, api_username, api_key):
     pagination = True
     paginated_content = []
     page_count = 0
+
+    categories_data = client.categories()
+    categories = {}
+
+    for category in categories_data:
+        categories[category[u"id"]] = {"id": category[u"id"], "name": category[u"name"], "slug": category[u"slug"], "description": category[u"description_text"], "topic_count": category[u"topic_count"], "post_count": category[u"post_count"], "url": category[u"topic_url"]}
 
     # Get the data of the paginated topics
     topics_request = client.latest_topics()
@@ -141,9 +141,11 @@ def discourse_analysis(url, api_username, api_key):
                     topic_id = topic["id"]
                     topic_slug = topic["slug"]
                     topic_title = topic["title"]
+                    topic_category = topic["category_id"]
+                    # Get the data of each topic
                     topic_content = client.posts(topic_id=topic_id)
-                    topic_posts = []
                     topics.append(topic_content)
+                    topic_posts = []
                     # Get the posts of each topic
                     for element in topic_content:
                         if element == "post_stream":
@@ -152,6 +154,10 @@ def discourse_analysis(url, api_username, api_key):
                                     '@node': post["id"],
                                     'date': post["created_at"],
                                     'msg': post["cooked"],
+                                    'slug': topic_slug,
+                                    'title': topic_title,
+                                    'category': topic_category,
+                                    'post_number': post["post_number"],
                                     'reply_to_post_number':
                                     post["reply_to_post_number"],
                                     'reply_count': post["reply_count"],
@@ -169,25 +175,24 @@ def discourse_analysis(url, api_username, api_key):
                                 topic_posts.append(this_post)
                                 # Add user as a node
                                 username = str(this_post["author"]["#text"])
-
                                 local_graph.add_node(username)
-                                print username
-                                print local_graph
-                                print type(local_graph)
-                                print local_graph.nodes
-                                print "node: ", local_graph.nodes[username]
-                                local_graph.nodes[username]["#text"] = post["username"]
-                                local_graph.nodes[username]["full_name"] = post["name"]
-                                local_graph.nodes[username]["id"] = post["user_id"]
-                                local_graph.nodes[username]["trust_level"] = post["trust_level"]
-                                local_graph.nodes[username]["moderator"] = post["moderator"]
-                                local_graph.nodes[username]["admin"] = post["admin"]
-                                local_graph.nodes[username]["staff"] = post["staff"]
+                                local_graph.node[username]["#text"] = post["username"]
+                                local_graph.node[username]["full_name"] = post["name"]
+                                local_graph.node[username]["id"] = post["user_id"]
+                                local_graph.node[username]["trust_level"] = post["trust_level"]
+                                local_graph.node[username]["moderator"] = post["moderator"]
+                                local_graph.node[username]["admin"] = post["admin"]
+                                local_graph.node[username]["staff"] = post["staff"]
                                 # Avatar url
-                                avatar_url = url + post["avatar_template"].replace('{size}', '90')
-                                local_graph.nodes[username]["avatar_url"] = avatar_url
+                                if url[-1] == "/":
+                                    avatar_url = url[:-1]
+                                else:
+                                    avatar_url = url
+                                avatar_url = avatar_url + post["avatar_template"].replace('{size}', '90')
+                                local_graph.node[username]["avatar_url"] = avatar_url
 
-                    # Analyze each commit and its comments
+                    # Analyze each topic and its comments
+                    # Order the posts
                     topic_posts_ordered = {}
                     for i in topic_posts:
                         if i['@node'] not in topic_posts_ordered:
@@ -200,13 +205,38 @@ def discourse_analysis(url, api_username, api_key):
                             topic_posts_ordered[i['@node']].append(i)
                         else:
                             topic_posts_ordered[i['@node']].append(i)
-                    for each_post in topic_posts_ordered:
-                        topic_analysis(topic_posts_ordered[each_post],
-                                       local_graph,
-                                       comment_type="discourse post")
 
-        return local_graph
+                    # Analyse the posts
+                    new_graph = discourse_topic_discussion_analysis(topic_posts)
+                    # Join the graphs
+                    final_graph = nx.compose(new_graph, local_graph)
 
+                    # Add missing user information
+                    for username, data in final_graph.nodes(data=True):
+                        if len(data) == 0:
+                            user_data = client.user(username=username)
+                            final_graph.node[username]["#text"] = username
+                            final_graph.node[username]["full_name"] = user_data["name"]
+                            final_graph.node[username]["id"] = user_data["id"]
+                            final_graph.node[username]["trust_level"] = user_data["trust_level"]
+                            final_graph.node[username]["moderator"] = user_data["moderator"]
+                            final_graph.node[username]["admin"] = user_data["admin"]
+                            # Check if the user is in the staff group
+                            is_staff = False
+                            for group in user_data["groups"]:
+                                if group["display_name"] == "staff":
+                                    is_staff = True
+                            final_graph.node[username]["staff"] = is_staff
+                            # Avatar url
+                            if url[-1] == "/":
+                                avatar_url = url[:-1]
+                            else:
+                                avatar_url = url
+                            avatar_url = avatar_url + user_data["avatar_template"].replace('{size}', '90')
+                            final_graph.node[username]["avatar_url"] = avatar_url
+
+
+    return final_graph
 
 if __name__ == "__main__":
     pass
