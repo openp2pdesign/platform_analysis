@@ -11,7 +11,8 @@
 import networkx as nx
 import datetime
 import email
-from email.utils import getaddresses, parseaddr
+from email.utils import getaddresses, parseaddr, parsedate_tz, mktime_tz
+from email.Parser import Parser as EmailParser
 import mailbox
 import sys
 import urllib
@@ -68,6 +69,12 @@ def mailman_analysis(url, list_name, username, password):
         resent_tos = msg.get_all('resent-to', [])
         resent_ccs = msg.get_all('resent-cc', [])
         all_recipients = getaddresses(tos + ccs + resent_tos + resent_ccs)
+
+        # Get the date of the message
+        parsed_date = parsedate_tz(msg.get('Date'))
+        timestamp = mktime_tz(parsed_date)
+        date = datetime.datetime.fromtimestamp(timestamp)
+
         # now add the edges for this mail message
         for (target_name, target_addr) in all_recipients:
             G.add_edge(source_addr, target_addr, message=msg)
