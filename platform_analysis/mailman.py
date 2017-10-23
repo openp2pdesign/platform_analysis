@@ -44,7 +44,7 @@ def mailman_analysis(url, list_name, username, password):
     full_url = url + "mailman/private/" + list_name + ".mbox/"+list_name+".mbox?username="+username+"&password="+password
 
     # Download the .mbox file with a random filename
-    filename = uuid.uuid4().hex  +".mbox"
+    filename = "/tmp/"+uuid.uuid4().hex  +".mbox"
     urllib.urlretrieve(full_url, filename)
 
     # Open the file
@@ -73,7 +73,7 @@ def mailman_analysis(url, list_name, username, password):
             G.add_edge(source_addr, target_addr, message=msg)
 
     # Delete file
-    os.remove(os.getcwd()+"/"+filename)
+    os.remove(filename)
 
     # Return the graph
     return G
