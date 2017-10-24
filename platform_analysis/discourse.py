@@ -12,6 +12,7 @@ import re
 from pydiscourse import DiscourseClient
 import networkx as nx
 import datetime
+from time import sleep
 
 
 def discourse_topic_discussion_analysis(discussion):
@@ -133,6 +134,7 @@ def discourse_analysis(url, api_username, api_key):
 
     # Browse the paginated topics
     topics = []
+    requests_count = 0
     for page in paginated_content:
         for key in page:
             if key == "topic_list":
@@ -143,7 +145,12 @@ def discourse_analysis(url, api_username, api_key):
                     topic_title = topic["title"]
                     topic_category = topic["category_id"]
                     # Get the data of each topic
+                    # But first check the API limit and wait if necessary
+                    if requests_count > 50:
+                        requests_count = 0
+                        sleep(10)
                     topic_content = client.posts(topic_id=topic_id)
+                    requests_count += 1
                     topics.append(topic_content)
                     topic_posts = []
                     # Get the posts of each topic
@@ -237,6 +244,7 @@ def discourse_analysis(url, api_username, api_key):
 
 
     return final_graph
+
 
 if __name__ == "__main__":
     pass
