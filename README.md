@@ -1,5 +1,6 @@
 ![](doc/images/platform_analysis_logo_100.png)
 
+[![PyPI version](https://badge.fury.io/py/platform_analysis.svg)](https://badge.fury.io/py/platform_analysis) [![Documentation Status](https://readthedocs.org/projects/platform-analysis/badge/?version=latest)](http://platform-analysis.readthedocs.io/en/latest/?badge=latest)
 
 A Python library for Social Network Analysis of online collaboration platforms and tools like Twitter, YouTube and Git, Hg, SVN, GitHub, GitLab, BitBucket repositories.
 
