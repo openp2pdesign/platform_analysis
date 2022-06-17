@@ -1,7 +1,7 @@
 DateTime==4.1.1
 decorator==4.0.10
 networkx==1.11
-numpy==1.11.2
+numpy==1.21.0
 pandas==0.19.1
 PyGithub==1.26.0
 python-dateutil==2.5.3
