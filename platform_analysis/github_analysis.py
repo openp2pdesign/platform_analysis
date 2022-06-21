@@ -16,6 +16,8 @@ import networkx as nx
 import git
 import datetime
 
+from ratelimit import limits, sleep_and_retry
+
 
 # Global variables
 # Edge counting
@@ -34,15 +36,15 @@ def check_none(value_to_check):
     return value_to_check if value_to_check is not None else "None"
 
 
-def github_login(userlogin, username, password):
+def github_login(username, token):
     """
     Login on GitHub in order to retrieve a dict of repositories
-    for a given username.
+    for a given username. Get the GitHub token from https://github.com/settings/tokens
     """
 
     # Log in to GitHub
     global github_login
-    github_login = Github(userlogin, password)
+    github_login = Github(token)
 
     results = {}
 
@@ -61,42 +63,42 @@ def clean_graph(graph):
     """
 
     for i in graph.nodes():
-        graph.node[i]["Label"] = str(i)
-        if "owner" not in graph.node[i]:
-            graph.node[i]["owner"] = "No"
-        if "committer" not in graph.node[i]:
-            graph.node[i]["committer"] = "No"
-        if "forker" not in graph.node[i]:
-            graph.node[i]["forker"] = "No"
-        if "stargazer" not in graph.node[i]:
-            graph.node[i]["stargazer"] = "No"
-        if "contributor" not in graph.node[i]:
-            graph.node[i]["contributor"] = "No"
-        if "collaborator" not in graph.node[i]:
-            graph.node[i]["collaborator"] = "No"
-        if "watcher" not in graph.node[i]:
-            graph.node[i]["watcher"] = "No"
-        if "subscriber" not in graph.node[i]:
-            graph.node[i]["subscriber"] = "No"
-        if "issue creator" not in graph.node[i]:
-            graph.node[i]["issue creator"] = "No"
-        if "issue commenter" not in graph.node[i]:
-            graph.node[i]["issue commenter"] = "No"
-        if "pull request assignee" not in graph.node[i]:
-            graph.node[i]["pull request assignee"] = "No"
-        if "issue assignee" not in graph.node[i]:
-            graph.node[i]["issue assignee"] = "No"
-        if "email" not in graph.node[i]:
-            graph.node[i]["email"] = "None"
-        if "avatar_url" not in graph.node[i]:
-            graph.node[i]["avatar_url"] = "None"
+        graph.nodes[i]["Label"] = str(i)
+        if "owner" not in graph.nodes[i]:
+            graph.nodes[i]["owner"] = "No"
+        if "committer" not in graph.nodes[i]:
+            graph.nodes[i]["committer"] = "No"
+        if "forker" not in graph.nodes[i]:
+            graph.nodes[i]["forker"] = "No"
+        if "stargazer" not in graph.nodes[i]:
+            graph.nodes[i]["stargazer"] = "No"
+        if "contributor" not in graph.nodes[i]:
+            graph.nodes[i]["contributor"] = "No"
+        if "collaborator" not in graph.nodes[i]:
+            graph.nodes[i]["collaborator"] = "No"
+        if "watcher" not in graph.nodes[i]:
+            graph.nodes[i]["watcher"] = "No"
+        if "subscriber" not in graph.nodes[i]:
+            graph.nodes[i]["subscriber"] = "No"
+        if "issue creator" not in graph.nodes[i]:
+            graph.nodes[i]["issue creator"] = "No"
+        if "issue commenter" not in graph.nodes[i]:
+            graph.nodes[i]["issue commenter"] = "No"
+        if "pull request assignee" not in graph.nodes[i]:
+            graph.nodes[i]["pull request assignee"] = "No"
+        if "issue assignee" not in graph.nodes[i]:
+            graph.nodes[i]["issue assignee"] = "No"
+        if "email" not in graph.nodes[i]:
+            graph.nodes[i]["email"] = "None"
+        if "avatar_url" not in graph.nodes[i]:
+            graph.nodes[i]["avatar_url"] = "None"
 
     # Fix None nodes and attributes
-    for v in graph.nodes_iter(data=True):
+    for v in list(graph.nodes(data=True)):
         for attrib in v[1]:
             # Convert nonetype values to string "None"
             if v[1][attrib] is None:
-                graph.node[v[0]][attrib] = "None"
+                graph.nodes[v[0]][attrib] = "None"
         # Remove any None node
         if v[0] == "None" or v[0] is None:
             graph.remove_node(v[0])
@@ -104,14 +106,14 @@ def clean_graph(graph):
     return graph
 
 
-def github_analysis(repository, username, userlogin, password, path):
+def github_analysis(repository, username, userlogin, token, path):
     """
-    Analyse a specific repository.
+    Analyse a specific repository. Get the GitHub token from https://github.com/settings/tokens
     """
 
     # Log in to GitHub
     global github_login
-    github_login = Github(userlogin, password)
+    github_login = Github(userlogin, token)
     repository_object = github_login.get_user(username).get_repo(repository)
 
     repo_analysis(repository=repository_object, path=path, graph=graph)
@@ -125,6 +127,8 @@ def github_analysis(repository, username, userlogin, password, path):
     return graph
 
 
+@sleep_and_retry
+@limits(calls=15, period=60)
 def fork_analysis(repository, graph):
     """
     Analyse the forks of a repository.
@@ -136,7 +140,9 @@ def fork_analysis(repository, graph):
     # Local graph variable
     local_graph = nx.MultiDiGraph()
 
-    for f, i in enumerate(repository.get_forks()):
+    forks_found = repository.get_forks()
+
+    for f, i in enumerate(forks_found):
         if i.owner is not None and repository.owner is not None:
             # Add edge from the forker to the owner
             if i.owner.login not in graph.nodes():
@@ -168,6 +174,8 @@ def fork_analysis(repository, graph):
     return local_graph
 
 
+@sleep_and_retry
+@limits(calls=15, period=60)
 def pull_requests_analysis(repository, graph):
     """
     Analyse the discussion of pull requests of a repository.
@@ -184,7 +192,8 @@ def pull_requests_analysis(repository, graph):
     pull_request_states = ["closed", "open"]
 
     for state in pull_request_states:
-        for f, i in enumerate(repository.get_pulls(state=state)):
+        pulls = repository.get_pulls(state=state)
+        for f, i in enumerate(pulls):
             if i.is_merged() is True:
             # if state == "closed":
                 # Add edge from who merged the pull request to who did it
@@ -277,18 +286,21 @@ def pull_requests_analysis(repository, graph):
 
             # Comments
             # for j in i.get_comments():
-            #     print j
+            #     print(j)
             # for j in i.get_review_comments():
-            #     print j
+            #     print(j)
             # for j in i.get_issue_comments():
-            #     print j
+            #     print(j)
 
             # Check the comments in the pull request
             pull_request_comments = []
-            for j in i.get_comments():
+
+            comments = i.get_comments()
+
+            for j in comments:
                 comment = {'@node': j.id,
                            'date': j.created_at,
-                           'msg': j.title,
+                           'msg': j.body,
                            'author': {'#text': j.user.login,
                                       '@email': j.user.email,
                                       'avatar_url': j.user.avatar_url}}
@@ -310,6 +322,8 @@ def pull_requests_analysis(repository, graph):
     return local_graph
 
 
+@sleep_and_retry
+@limits(calls=15, period=60)
 def issue_analysis(issue, graph):
     """
     Analyse the discussion of a single issue.
@@ -359,7 +373,8 @@ def issue_analysis(issue, graph):
                    '@email': issue.user.email,
                    'avatar_url': issue.user.avatar_url}}
     issues_comments.append(first_issue_comment)
-    for j, f in enumerate(issue.get_comments()):
+    icomments = issue.get_comments()
+    for j, f in enumerate(icomments):
         comment = {'@node': f.id,
                    'date': f.created_at,
                    'msg': issue.title,  # Use f.body for the comment content
@@ -381,6 +396,8 @@ def issue_analysis(issue, graph):
     return local_graph
 
 
+@sleep_and_retry
+@limits(calls=15, period=60)
 def comments_analysis(discussion, graph, comment_type):
     """
     Analyse the discussion of a GitHub discussion.
@@ -405,8 +422,9 @@ def comments_analysis(discussion, graph, comment_type):
             local_graph.add_edge(
                 f["author"]["#text"], k["author"]["#text"], key=edge_key,
                 type=comment_type, node=f["@node"], date=f["date"],
-                msg=f["msg"], start=f["date"],
+                start=f["date"], msg=f["msg"],
                 endopen=datetime.datetime.now().year)
+            # removed msg=f["msg"],
 
             # Check if there are any username mentions in the body of each
             # comment, and add an edge if there are any
@@ -442,6 +460,8 @@ def comments_analysis(discussion, graph, comment_type):
     return local_graph
 
 
+@sleep_and_retry
+@limits(calls=15, period=60)
 def get_users(element, user_type, graph):
     """
     Get users of a specific type from the GitHub repo.
@@ -449,32 +469,50 @@ def get_users(element, user_type, graph):
 
     try:
         if element is not None:
-            if str(element.login) not in graph:
-                graph.add_node(str(element.login))
-                # graph.node[str(element.login)]["Label"] = str(element.login)
-                graph.node[str(element.login)][user_type] = "Yes"
-                graph.node[str(element.login)]["email"] = check_none(element.email)
-                graph.node[str(element.login)]["avatar_url"] = check_none(
-                    element.avatar_url)
+            if type(element) == str:
+                element_name = element
+                element_email = "..."
+                element_avatar_url = "..."
             else:
-                graph.node[str(element.login)][user_type] = "Yes"
+                element_name = str(element.login)
+                element_email = str(element.email)
+                element_avatar_url = str(element.avatar_url)
+            if element_name not in graph:
+                graph.add_node(element_name)
+                # graph.nodes[str(element.login)]["Label"] = str(element.login)
+                graph.nodes[element_name][user_type] = "Yes"
+                graph.nodes[element_name]["email"] = check_none(element_email)
+                graph.nodes[element_name]["avatar_url"] = check_none(
+                    element_avatar_url )
+            else:
+                graph.nodes[element_name][user_type] = "Yes"
     except:
         try:
-            new_element = github_login.get_user(element)
-            if new_element is not None:
-                if str(new_element.login) not in graph:
-                    graph.add_node(str(new_element.login))
-                    # graph.node[str(new_element.login)]["Label"] = check_none(new_element.login)
-                    graph.node[str(new_element.login)][user_type] = "Yes"
-                    graph.node[str(new_element.login)]["email"] = check_none(new_element.email)
-                    graph.node[str(new_element.login)]["avatar_url"] = check_none(new_element.avatar_url)
+            if element is not None:
+                if type(element) == str:
+                    new_element_name = element
+                    new_element_email = "..."
+                    new_element_avatar_url = "..."
                 else:
-                    graph.node[str(new_element.login)][user_type] = "Yes"
-        except:
+                    new_element = github_login.get_user(element.login)
+                    new_element_name = str(element.login)
+                    new_element_email = str(element.email)
+                    new_element_avatar_url = str(element.avatar_url)
+                if new_element_name not in graph:
+                    graph.add_node(new_element_name)
+                    # graph.nodes[str(new_element.login)]["Label"] = check_none(new_element.login)
+                    graph.nodes[new_element_name][user_type] = "Yes"
+                    graph.nodes[new_element_name]["email"] = check_none(new_element_email)
+                    graph.nodes[new_element_name]["avatar_url"] = check_none(new_element_avatar_url)
+                else:
+                    graph.nodes[new_element_name][user_type] = "Yes"
+        except Exception as e:
             print("There was an error with", element, "which is of type",
-                  type(element))
+                  type(element), "with error", e)
 
 
+@sleep_and_retry
+@limits(calls=15, period=60)
 def repo_analysis(repository, path, graph):
     """
     Analyse a specific GitHub repo.
@@ -527,10 +565,8 @@ def repo_analysis(repository, path, graph):
 
     # Analyse issues of the repo
     if repository.has_issues is True:
-        for i in repository.get_issues(state="open"):
-            issue_analysis(i, graph)
-            issue_analysis(i, local_graph)
-        for i in repository.get_issues(state="closed"):
+        prova_issues = repository.get_issues(state="all")
+        for i in prova_issues:
             issue_analysis(i, graph)
             issue_analysis(i, local_graph)
 
@@ -538,7 +574,8 @@ def repo_analysis(repository, path, graph):
 
     # Get the log from GitHub, we want the GitHub username
     github_commits = []
-    for i in repository.get_commits():
+    commits = repository.get_commits()
+    for i in commits:
         if i is not None:
             commit = {
                 "@node": check_none(i.sha),
@@ -602,7 +639,8 @@ def repo_analysis(repository, path, graph):
     # Get interactions from comments in commits on GitHub
     github_commits_comments = []
     github_commits_comments_ordered = {}
-    for i in repository.get_comments():
+    comments = repository.get_comments()
+    for i in comments:
         comment = {'@node': i.commit_id,
                    'date': i.created_at,
                    'msg': i.body,

@@ -10,7 +10,7 @@
 
 import json
 from splitstream import splitfile
-import StringIO
+from io import StringIO
 
 
 def convert_log_to_dict(input_text):

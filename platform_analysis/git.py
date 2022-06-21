@@ -13,7 +13,7 @@ import os
 import shutil
 import json
 from splitstream import splitfile
-import StringIO
+from io import BytesIO
 import unicodedata
 from collections import OrderedDict
 from dateutil.parser import parse
@@ -30,7 +30,9 @@ def convert_log_to_dict(input_text):
     """
 
     items = []
-    f = StringIO.StringIO(input_text)
+    #if type(input_text) != "str":
+    #    input_text = input_text.decode('utf-8')
+    f = BytesIO(input_text)
     for jsonstr in splitfile(f, format="json"):
         try:
             items.append(json.loads(jsonstr))
@@ -145,13 +147,14 @@ def get_files_log(path):
 
         # Create the command for diff-tree
         current_command = 'git diff-tree --no-commit-id --name-status -r ' + \
-            current_commit
+            current_commit.decode('utf-8')
 
         # Get the log of the files for the current commit
         git_commit_files_log = subprocess.check_output(
             [current_command], cwd=path, shell=True)
 
         # Split the output in a list of files
+        git_commit_files_log = git_commit_files_log.decode('utf-8')
         current_files_list = [
             line for line in git_commit_files_log.split('\n')
             if line.strip() != ''
@@ -205,7 +208,7 @@ def git_repo_analysis(git_files_log, graph):
         # of the file history
         sorted_file_history = OrderedDict(
             sorted(
-                file_history.iteritems(), key=lambda x: x[1]['date']))
+                file_history.items(), key=lambda x: x[1]['date']))
 
         # Add an edge from a committer to the previous ones
         # since there are interactions on the same file
@@ -217,7 +220,7 @@ def git_repo_analysis(git_files_log, graph):
                     sorted_file_history[j]["author"], committer="Yes",
                     email=sorted_file_history[j]["email"])
             else:
-                graph.node[sorted_file_history[j]["author"]]["committer"] = "Yes"
+                graph.nodes[sorted_file_history[j]["author"]]["committer"] = "Yes"
 
             # Look for the interactions
             following_committers = {}

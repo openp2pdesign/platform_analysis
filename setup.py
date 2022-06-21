@@ -13,9 +13,10 @@ setup(
         "xmltodict",
         "pandas",
         "datetime",
-        "pydiscourse"
+        "pydiscourse",
+        "ratelimit"
     ],
-    version='0.20',
+    version='0.21',
     description='A Python library for Social Network Analysis of online collaboration platforms and tools like Twitter, YouTube and Git, Hg, SVN, GitHub, GitLab, BitBucket repositories',
     author='Massimo Menichinelli',
     author_email='info@openp2pdesign.org',
@@ -29,7 +30,6 @@ setup(
                  "Operating System :: OS Independent",
                  "Intended Audience :: Science/Research",
                  "Programming Language :: Python",
-                 "Programming Language :: Python :: 2",
-                 "Programming Language :: Python :: 2.7",
+                 "Programming Language :: Python :: 3",
                  "License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)", ],
 )
