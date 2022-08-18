@@ -39,7 +39,10 @@ def graph_to_pandas_time_series(graph):
     Transform a graph into a pandas time series DataFrame.
     """
 
-    # Empty DataFrame of actions
+    # List of rows
+    rows_list = []
+
+    # Empty DataFrame of interactions
     time_dataframe = pd.DataFrame(columns=[
         '0',
         '1',
@@ -51,33 +54,41 @@ def graph_to_pandas_time_series(graph):
         'value'
         ])
 
-    # Iterate over edges to create a DataFrame of actions
-    for i in list(graph.edges(data=True)):
-        if "node" in i[2]:
-            node = i[2]["node"]
+    # Iterate over edges to create a DataFrame of interactions
+    for u, v, d in graph.edges(data=True):
+        if "node" in d:
+            node = d["node"]
         else:
             node = "None"
-        if "msg" in i[2]:
-            msg = i[2]["msg"]
+        if "msg" in d:
+            msg = d["msg"]
         else:
             msg = "None"
         # Create a new row
         new_row = [
-            i[0],
-            i[1],
+            u,
+            v,
             node,
             msg,
-            i[2]["type"],
-            i[2]["endopen"],
-            i[2]["start"],
+            d["type"],
+            d["endopen"],
+            d["start"],
             1
             ]
-        # Add the new row to the DataFrame of actions
-        time_dataframe.loc[len(time_dataframe)] = new_row
+        # Add the new row to the DataFrame of interactions
+        #time_dataframe.loc[len(time_dataframe)] = new_row
+        row_df = pd.DataFrame([new_row])
+        rows_list.append(row_df)
 
-        # Convert column strings to datetimes
-        time_dataframe['start'] = pd.to_datetime(time_dataframe['start'])
-        time_dataframe['endopen'] = pd.to_datetime(time_dataframe['endopen'])
+    # Convert list to full dataframe
+    time_dataframe = pd.concat(rows_list, axis=0)
+    time_dataframe.rename(columns={0: "0", 1: "1", 2: 'node', 3: 'msg',
+                      4: 'type', 5: 'endopen', 6: 'start',
+                      7: 'value'}, inplace=True)
+
+    # Convert column strings to datetimes
+    time_dataframe['start'] = pd.to_datetime(time_dataframe['start'])
+    time_dataframe['endopen'] = pd.to_datetime(time_dataframe['endopen'])
 
     return time_dataframe
 
