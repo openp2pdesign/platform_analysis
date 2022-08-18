@@ -15,6 +15,7 @@ from github import Github
 import networkx as nx
 import git
 import datetime
+from time import sleep
 
 from ratelimit import limits, sleep_and_retry
 
@@ -23,7 +24,7 @@ from ratelimit import limits, sleep_and_retry
 # Edge counting
 edge_key = 0
 # The main graph
-graph = nx.MultiDiGraph()
+global_graph = nx.MultiDiGraph()
 # Log in to GitHub
 github_login = Github()
 
@@ -116,19 +117,18 @@ def github_analysis(repository, username, userlogin, token, path):
     github_login = Github(userlogin, token)
     repository_object = github_login.get_user(username).get_repo(repository)
 
-    repo_analysis(repository=repository_object, path=path, graph=graph)
+    # Graph creation
+    global global_graph
+    repo_analysis(repository=repository_object, path=path, graph=global_graph)
+    fork_analysis(repository=repository_object, graph=global_graph)
+    pull_requests_analysis(repository=repository_object, graph=global_graph)
+    clean_graph(graph=global_graph)
 
-    fork_analysis(repository=repository_object, graph=graph)
-
-    pull_requests_analysis(repository=repository_object, graph=graph)
-
-    clean_graph(graph=graph)
-
-    return graph
+    return global_graph
 
 
 @sleep_and_retry
-@limits(calls=15, period=60)
+@limits(calls=4000, period=3600)
 def fork_analysis(repository, graph):
     """
     Analyse the forks of a repository.
@@ -175,7 +175,7 @@ def fork_analysis(repository, graph):
 
 
 @sleep_and_retry
-@limits(calls=15, period=60)
+@limits(calls=4000, period=3600)
 def pull_requests_analysis(repository, graph):
     """
     Analyse the discussion of pull requests of a repository.
@@ -323,7 +323,7 @@ def pull_requests_analysis(repository, graph):
 
 
 @sleep_and_retry
-@limits(calls=15, period=60)
+@limits(calls=4000, period=3600)
 def issue_analysis(issue, graph):
     """
     Analyse the discussion of a single issue.
@@ -397,7 +397,7 @@ def issue_analysis(issue, graph):
 
 
 @sleep_and_retry
-@limits(calls=15, period=60)
+@limits(calls=4000, period=3600)
 def comments_analysis(discussion, graph, comment_type):
     """
     Analyse the discussion of a GitHub discussion.
@@ -461,7 +461,7 @@ def comments_analysis(discussion, graph, comment_type):
 
 
 @sleep_and_retry
-@limits(calls=15, period=60)
+@limits(calls=4000, period=3600)
 def get_users(element, user_type, graph):
     """
     Get users of a specific type from the GitHub repo.
@@ -512,7 +512,7 @@ def get_users(element, user_type, graph):
 
 
 @sleep_and_retry
-@limits(calls=15, period=60)
+@limits(calls=4000, period=3600)
 def repo_analysis(repository, path, graph):
     """
     Analyse a specific GitHub repo.
@@ -576,6 +576,8 @@ def repo_analysis(repository, path, graph):
     github_commits = []
     commits = repository.get_commits()
     for i in commits:
+        # TODO Too many commits, slow down
+        sleep(10)
         if i is not None:
             commit = {
                 "@node": check_none(i.sha),
