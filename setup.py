@@ -1,3 +1,11 @@
+#from distutils.core import setup
+from setuptools import setup
+
+# read the contents of your README file
+from pathlib import Path
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
+
 from distutils.core import setup
 setup(
     name='platform_analysis',
@@ -14,16 +22,18 @@ setup(
         "pandas",
         "datetime",
         "pydiscourse",
-        "ratelimit"
+        "ratelimit",
+        "twitter",
+        "pathlib"
     ],
-    version='0.21',
+    version='0.31',
     description='A Python library for Social Network Analysis of online collaboration platforms and tools like Twitter, YouTube and Git, Hg, SVN, GitHub, GitLab, BitBucket repositories',
     author='Massimo Menichinelli',
     author_email='info@openp2pdesign.org',
     url='https://github.com/openp2pdesign/platform_analysis',
-    download_url='https://github.com/openp2pdesign/platform_analysis/releases/tag/v0.2',
+    download_url='https://github.com/openp2pdesign/platform_analysis/releases/tag/v0.31',
     keywords=['Git', 'Hg', 'Mercurial', 'SVN', 'Subversion',
-              'GitHub', 'BitBucket', 'Social Network Analysis', 'SNA'],
+              'GitHub', 'BitBucket', 'Twitter', 'Social Network Analysis', 'SNA'],
     classifiers=["Development Status :: 3 - Alpha",
                  "Topic :: Utilities",
                  "Environment :: Web Environment",

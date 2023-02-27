@@ -8,6 +8,7 @@ idna==3.3
 networkx==2.8.4
 numpy==1.22.4
 pandas==1.4.2
+pathlib==1.0.1
 pycparser==2.21
 pydiscourse==1.2.0
 PyGithub==1.55

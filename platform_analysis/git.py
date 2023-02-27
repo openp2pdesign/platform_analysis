@@ -18,7 +18,7 @@ import unicodedata
 from collections import OrderedDict
 from dateutil.parser import parse
 
-import github_analysis
+from . import github_analysis
 
 import networkx as nx
 import datetime

@@ -13,7 +13,7 @@ import string
 from github import Github
 
 import networkx as nx
-import git
+from . import git
 import datetime
 from time import sleep
 

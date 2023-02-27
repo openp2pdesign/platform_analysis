@@ -12,13 +12,14 @@ import networkx as nx
 import datetime
 import email
 from email.utils import getaddresses, parseaddr, parsedate_tz, mktime_tz
-from email.Parser import Parser as EmailParser
+# from email.Parser import Parser as EmailParser
 import mailbox
 import sys
 import urllib
 import os
 import uuid
 
+# TODO Update with https://networkx.org/documentation/stable/auto_examples/drawing/plot_unix_email.html?highlight=mbox
 
 def mailman_analysis(url, list_name, username, password):
     """
