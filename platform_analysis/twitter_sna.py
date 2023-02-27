@@ -1,14 +1,14 @@
 # -*- encoding: utf-8 -*-
 #
-# Social Network Analysis of Git, Hg, SVN, GitHub, BitBucket repositories
+# Social Network Analysis of Twitter connections (Ego Networks)
 #
-# first_perspective_accounts: Massimo Menichinelli
+# Author: Massimo Menichinelli
 # Homepage: http://www.openp2pdesign.org
 # License: LGPL v.3
 #
 
 
-from twitter import *
+import twitter
 import networkx as nx
 from time import sleep
 import sys
@@ -19,11 +19,9 @@ import json
 from ratelimit import limits, sleep_and_retry
 
 # Global variables
-graph = nx.DiGraph()
-locations = {}
 errors = 0
 protected_accounts = 0
-
+t = "" # Twitter connection
 
 @sleep_and_retry
 @limits(calls=900, period=900)
@@ -38,6 +36,7 @@ def twitter_accounts_connections(accounts_list, option):
 
     global errors
     global protected_accounts
+    global t
     connections = {}
 
     for p in accounts_list:
@@ -50,10 +49,10 @@ def twitter_accounts_connections(accounts_list, option):
             # API: https://dev.twitter.com/docs/api/1.1/get/friends/ids
             try:
                 if option == "followers":
-                    query = twitter.followers.ids(
+                    query = t.followers.ids(
                         user_id=p, count=5000, cursor=cursor)
                 else:
-                    query = twitter.friends.ids(
+                    query = t.friends.ids(
                         user_id=p, count=5000, cursor=cursor)
                 cursor = query["next_cursor_str"]
                 for idtocheck1 in query["ids"]:
@@ -66,7 +65,7 @@ def twitter_accounts_connections(accounts_list, option):
                         sleep(1)
                     if option == "followers":
                         try:
-                            query = twitter.followers.ids(
+                            query = t.followers.ids(
                                 user_id=p, count=5000, cursor=cursor)
                         except:
                             cursor = "0"
@@ -74,7 +73,7 @@ def twitter_accounts_connections(accounts_list, option):
                             notworking = True
                     else:
                         try:
-                            query = twitter.friends.ids(
+                            query = t.friends.ids(
                                 user_id=p, count=5000, cursor=cursor)
                         except:
                             cursor = "0"
@@ -85,8 +84,8 @@ def twitter_accounts_connections(accounts_list, option):
                         cursor = query["next_cursor_str"]
                         for idtocheck2 in query["ids"]:
                             connections[p].append(idtocheck2)
-                elif "Not first_perspective_accountsized" in str(e):
-                    # Unfirst_perspective_accountsized account
+                elif "Not authorized" in str(e):
+                    # Unauthorized account
                     cursor = "0"
                     errors += 1
                     protected_accounts += 1
@@ -114,9 +113,12 @@ def twitter_accounts_graph(ACCESS_TOKEN, ACCESS_TOKEN_SECRET, API_KEY, API_KEY_S
     :return: returns a dict with a graph of connections among Twitter accounts and overall statics of the results of the search
     """
 
+    global t
+    graph = nx.DiGraph()
+
     # Log in
     # TODO Move to API v2 when they will port user search
-    twitter = Twitter(auth=OAuth(ACCESS_TOKEN, ACCESS_TOKEN_SECRET,
+    t = twitter.Twitter(auth=twitter.OAuth(ACCESS_TOKEN, ACCESS_TOKEN_SECRET,
                       API_KEY, API_KEY_SECRET), api_version="1.1")
     # Result variables
     search_results = []
@@ -128,7 +130,7 @@ def twitter_accounts_graph(ACCESS_TOKEN, ACCESS_TOKEN_SECRET, API_KEY, API_KEY_S
     search_results_word = []
     for user in first_perspective_accounts:
         try:
-            search = twitter.users.lookup(screen_name=user)
+            search = t.users.lookup(screen_name=user)
             search_results.append(search[0])
             accounts_data[search[0]["id"]] = search[0]
             search_results_word.append(search[0])
@@ -139,7 +141,7 @@ def twitter_accounts_graph(ACCESS_TOKEN, ACCESS_TOKEN_SECRET, API_KEY, API_KEY_S
     search_results_word = []
     for user in second_perspective_accounts:
         try:
-            search = twitter.users.lookup(screen_name=user)
+            search = t.users.lookup(screen_name=user)
             search_results.append(search[0])
             accounts_data[search[0]["id"]] = search[0]
             search_results_word.append(search[0])
@@ -154,7 +156,7 @@ def twitter_accounts_graph(ACCESS_TOKEN, ACCESS_TOKEN_SECRET, API_KEY, API_KEY_S
         # https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/follow-search-get-users/api-reference/get-users-search
         for i in range(50):
             try:
-                search = twitter.users.search(q=word, page=i, count=20)
+                search = t.users.search(q=word, page=i, count=20)
                 for k in search:
                     search_results.append(k)
                     search_results_word.append(k)
@@ -243,7 +245,7 @@ def twitter_accounts_graph(ACCESS_TOKEN, ACCESS_TOKEN_SECRET, API_KEY, API_KEY_S
     # Save the graph, only accounts of the chosen lists and the connections
     # among them
 
-    # TODO Save full stats
+    # TODO Save full stats for each keyword
 
     returning_results = {"stats": search_results_stats, "errors": errors,
                          "protected_accounts": protected_accounts, "graph": graph}
